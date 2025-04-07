@@ -17,7 +17,7 @@
 								'py-3 px-4 rounded-lg text-center font-medium transition-colors',
 								gameType === type
 									? 'bg-blue-600 text-white'
-									: 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+									: 'bg-gray-100 text-gray-700 hover:bg-gray-200',
 							]"
 						>
 							{{ type }}
@@ -30,14 +30,14 @@
 					<label class="block font-medium text-gray-700">Best of Legs</label>
 					<div class="grid grid-cols-3 gap-2">
 						<button
-							v-for="legs in [1, 3, 5]"
+							v-for="legs in [1, 3, 5, 7, 9, 11, 13, 15]"
 							:key="legs"
 							@click="numberOfLegs = legs"
 							:class="[
 								'py-3 px-4 rounded-lg text-center font-medium transition-colors',
 								numberOfLegs === legs
 									? 'bg-blue-600 text-white'
-									: 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+									: 'bg-gray-100 text-gray-700 hover:bg-gray-200',
 							]"
 						>
 							{{ legs }}
@@ -62,7 +62,12 @@
 									class="text-red-600 hover:text-red-800"
 								>
 									<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M6 18L18 6M6 6l12 12"
+										></path>
 									</svg>
 								</button>
 							</div>
@@ -111,26 +116,20 @@
 					<h1 class="text-xl md:text-2xl font-bold">X01 Game</h1>
 					<p class="text-sm text-gray-600">Leg {{ currentLeg }} of {{ numberOfLegs }}</p>
 				</div>
-				<button
-					@click="confirmCancelGame"
-					class="p-2 text-red-600 hover:text-red-800"
-				>
+				<button @click="confirmCancelGame" class="p-2 text-red-600 hover:text-red-800">
 					<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M6 18L18 6M6 6l12 12"
+						></path>
 					</svg>
 				</button>
 			</div>
 
-			<!-- Winner Display -->
-			<div v-if="winner" class="mb-4 bg-green-50 border border-green-200 p-4 rounded-lg text-center">
-				<div class="text-2xl font-bold text-green-700 flex items-center justify-center gap-2">
-					<span class="text-3xl">🏆</span>
-					{{ winner }} wins!
-				</div>
-			</div>
-
-			<!-- Player Scorecards -->
-			<div class="space-y-4">
+			<!-- Player Scorecards List -->
+			<div class="space-y-4 mb-6">
 				<div
 					v-for="(player, index) in selectedPlayers"
 					:key="player.id"
@@ -139,10 +138,11 @@
 						currentPlayerIndex === index && !isGameFinished
 							? 'bg-blue-50 border-2 border-blue-200'
 							: winner?.id === player.id
-							? 'bg-green-50 border-2 border-green-200'
-							: 'bg-white border border-gray-200'
+								? 'bg-green-50 border-2 border-green-200'
+								: 'bg-white border border-gray-200',
 					]"
 				>
+					<!-- Player Header -->
 					<div class="flex items-center justify-between mb-2">
 						<div>
 							<h3 class="text-lg font-bold">{{ player.name }}</h3>
@@ -169,95 +169,101 @@
 						</div>
 					</div>
 
-					<!-- Current Player's Turn -->
-					<div v-if="currentPlayerIndex === index && !isGameFinished" class="mt-4">
-						<!-- Current Throw Display -->
-						<div class="bg-gray-50 p-3 rounded-lg mb-4">
-							<div class="grid grid-cols-4 gap-2 text-center">
-								<div v-for="(dart, i) in currentTurnDarts" :key="i" class="text-lg font-medium">
-									{{ formatDart(dart) }}
-								</div>
-								<div class="font-bold text-blue-600">
-									{{ calculateTurnTotal() }}
-								</div>
-							</div>
-						</div>
-
-						<!-- Multiplier Buttons -->
-						<div class="grid grid-cols-3 gap-2 mb-4">
-							<button
-								v-for="multiplier in multipliers"
-								:key="multiplier"
-								@click="setMultiplier(multiplier)"
-								:class="[
-									'py-3 rounded-lg font-medium transition-colors',
-									currentMultiplier === multiplier
-										? 'bg-blue-600 text-white'
-										: 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-								]"
-							>
-								{{ multiplier === 'single' ? 'Single' : multiplier === 'double' ? 'Double' : 'Triple' }}
-							</button>
-						</div>
-
-						<!-- Number Pad -->
-						<div class="grid grid-cols-3 gap-2">
-							<button
-								v-for="n in 20"
-								:key="n"
-								@click="addScore(n)"
-								class="py-4 bg-white border border-gray-200 rounded-lg text-lg font-medium hover:bg-gray-50 transition-colors active:bg-gray-100"
-							>
-								{{ n }}
-							</button>
-							<button
-								@click="addScore(25)"
-								class="py-4 bg-white border border-gray-200 rounded-lg text-lg font-medium hover:bg-gray-50 transition-colors active:bg-gray-100"
-							>
-								Bull
-							</button>
-							<button
-								@click="addScore(0)"
-								class="py-4 bg-white border border-gray-200 rounded-lg text-lg font-medium hover:bg-gray-50 transition-colors active:bg-gray-100"
-							>
-								Miss
-							</button>
-						</div>
-					</div>
-
 					<!-- Last Round Info -->
 					<div v-if="getLastRoundTotal(index)" class="mt-2 text-sm text-gray-600">
 						Last Round: {{ getLastRoundTotal(index) }}
 					</div>
 				</div>
 			</div>
-		</div>
 
-		<!-- Fixed Bottom Bar -->
-		<div
-			v-if="gameStarted && !isGameFinished && getCurrentPlayer.score <= 170"
-			class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4"
-		>
-			<div class="max-w-md mx-auto">
-				<div v-if="getCheckoutSuggestion(getCurrentPlayer.score)" class="mb-2">
-					<div class="text-sm font-medium text-gray-600">Checkout Suggestion:</div>
-					<div class="text-lg font-bold">
-						{{ getCheckoutSuggestion(getCurrentPlayer.score)?.join(' - ') }}
+			<!-- Shared Score Calculator -->
+			<div v-if="!isGameFinished" class="bg-white border border-gray-200 rounded-lg p-3">
+				<div class="mb-3">
+					<h3 class="text-base font-bold mb-1">
+						{{ selectedPlayers[currentPlayerIndex].name }}
+						<span class="text-gray-600">({{ selectedPlayers[currentPlayerIndex].score }})</span>
+					</h3>
+
+					<!-- Current Throw Display -->
+					<div class="bg-gray-50 p-2 rounded-lg mb-2">
+						<div class="grid grid-cols-3 gap-2 text-center">
+							<div v-for="(dart, i) in currentTurnDarts" :key="i" class="text-base font-medium">
+								{{ formatDart(dart) }}
+							</div>
+						</div>
+						<button
+							v-if="gameHistory.length > 0"
+							@click="undoLastThrow"
+							class="w-full mt-1 py-1 px-2 text-xs text-red-600 hover:text-red-800 font-medium flex items-center justify-center gap-1"
+						>
+							<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M3 10h10a4 4 0 0 1 4 4v2M3 10l6 6m-6-6l6-6"
+								/>
+							</svg>
+							Undo
+						</button>
+					</div>
+
+					<!-- Turn Total -->
+					<div class="text-center mb-2">
+						<div class="text-base font-bold text-blue-600">Total: {{ calculateTurnTotal() }}</div>
+						<div v-if="getCheckoutSuggestion(getCurrentPlayer.score)" class="text-xs text-gray-600 mt-1">
+							{{ getCheckoutSuggestion(getCurrentPlayer.score)?.join(" - ") }}
+						</div>
+					</div>
+
+					<!-- Multiplier Buttons -->
+					<div class="grid grid-cols-3 gap-1 mb-2">
+						<button
+							v-for="multiplier in multipliers"
+							:key="multiplier"
+							@click="setMultiplier(multiplier)"
+							:class="[
+								'py-1 px-2 rounded text-sm font-medium transition-colors',
+								currentMultiplier === multiplier
+									? 'bg-blue-600 text-white'
+									: 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+							]"
+						>
+							{{ multiplier === "single" ? "S" : multiplier === "double" ? "D" : "T" }}
+						</button>
+					</div>
+
+					<!-- Number Pad -->
+					<div class="grid grid-cols-3 gap-1">
+						<button
+							v-for="n in 20"
+							:key="n"
+							@click="addScore(n)"
+							class="py-2 bg-white border border-gray-200 rounded text-base font-medium hover:bg-gray-50 transition-colors active:bg-gray-100"
+						>
+							{{ n }}
+						</button>
+						<button
+							@click="addScore(25)"
+							class="py-2 bg-white border border-gray-200 rounded text-base font-medium hover:bg-gray-50 transition-colors active:bg-gray-100"
+						>
+							B
+						</button>
+						<button
+							@click="addScore(0)"
+							class="py-2 bg-white border border-gray-200 rounded text-base font-medium hover:bg-gray-50 transition-colors active:bg-gray-100"
+						>
+							0
+						</button>
 					</div>
 				</div>
-				<div class="grid grid-cols-2 gap-2">
-					<button
-						@click="undoLastThrow"
-						class="py-3 px-4 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
-					>
-						Undo Last
-					</button>
-					<button
-						@click="moveToNextPlayer"
-						class="py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-					>
-						Next Player
-					</button>
+
+				<!-- Winner Display -->
+				<div v-if="winner" class="mb-4 bg-green-50 border border-green-200 p-4 rounded-lg text-center">
+					<div class="text-2xl font-bold text-green-700 flex items-center justify-center gap-2">
+						<span class="text-3xl">🏆</span>
+						{{ winner }} wins!
+					</div>
 				</div>
 			</div>
 		</div>
@@ -369,12 +375,12 @@ const isGameInProgress = computed(() => selectedPlayers.value.length > 0 && !win
 // Get the current player's throws in this turn
 const currentTurnDarts = computed(() => {
 	// Get all throws in current leg for current player
-	const throwsInLeg = gameHistory.value.filter(
+	const throwsInCurrentLeg = gameHistory.value.filter(
 		(t) => t.leg === currentLeg.value && t.playerIndex === currentPlayerIndex.value
 	);
 
 	// Get throws for current turn
-	return throwsInLeg.filter((t) => t.turnIndex === currentTurnIndex.value);
+	return throwsInCurrentLeg.filter((t) => t.turnIndex === currentTurnIndex.value);
 });
 
 interface PlayerStats {
@@ -517,7 +523,7 @@ function getPlayerStats(playerId: number): PlayerStats {
 	// Calculate checkout statistics
 	const checkoutAttempts = gameHistory.value.filter((throw_) => {
 		if (throw_.playerIndex !== playerId) return false;
-    
+
 		// Count as attempt if score can be finished with a double
 		// This includes:
 		// 1. Any score <= 40 that's even (can finish with a double)
@@ -527,16 +533,15 @@ function getPlayerStats(playerId: number): PlayerStats {
 
 	const checkoutSuccesses = gameHistory.value.filter((throw_) => {
 		// Count successful checkouts (score becomes 0 with a double)
-		return throw_.playerIndex === playerId && 
-               throw_.multiplier === "double" && 
-               throw_.score - (throw_.value * 2) === 0;
+		return (
+			throw_.playerIndex === playerId && throw_.multiplier === "double" && throw_.score - throw_.value * 2 === 0
+		);
 	}).length;
 
 	// Calculate checkout percentage as hits / (hits + misses)
 	const missedCheckouts = checkoutAttempts - checkoutSuccesses;
-	const checkoutPercentage = checkoutSuccesses > 0 
-		? (checkoutSuccesses / (checkoutSuccesses + missedCheckouts)) * 100 
-		: 0;
+	const checkoutPercentage =
+		checkoutSuccesses > 0 ? (checkoutSuccesses / (checkoutSuccesses + missedCheckouts)) * 100 : 0;
 
 	return {
 		average,
@@ -546,9 +551,9 @@ function getPlayerStats(playerId: number): PlayerStats {
 		doublesPercentage: doubleAttempts > 0 ? (checkoutSuccesses / doubleAttempts) * 100 : 0,
 		doublesHit: checkoutSuccesses,
 		doublesAttempted: doubleAttempts,
-		checkoutAttempts: checkoutSuccesses + missedCheckouts,  // Total attempts (hits + misses)
+		checkoutAttempts: checkoutSuccesses + missedCheckouts, // Total attempts (hits + misses)
 		checkoutSuccesses,
-		checkoutPercentage,  // Add this to the stats
+		checkoutPercentage, // Add this to the stats
 		oneEighties: 0,
 		oneFortyPlus: 0,
 		hundredPlus: 0,
@@ -773,96 +778,33 @@ function undoLastThrow() {
 	const lastThrow = gameHistory.value[gameHistory.value.length - 1];
 	const player = selectedPlayers.value[lastThrow.playerIndex];
 
-	// Get throws in current leg before this one
-	const throwsInLeg = gameHistory.value
-		.slice(0, gameHistory.value.indexOf(lastThrow))
-		.filter((t) => t.leg === lastThrow.leg);
+	// Remove the last throw
+	gameHistory.value.pop();
 
-	// Calculate score before this throw
-	const scoreBeforeThrow =
-		gameType.value -
-		throwsInLeg
-			.filter((t) => t.playerIndex === lastThrow.playerIndex)
-			.reduce((sum, t) => sum + t.value * multiplierValues[t.multiplier], 0);
+	// Update current player and turn based on the last throw
+	currentPlayerIndex.value = lastThrow.playerIndex;
+	currentTurnIndex.value = lastThrow.turnIndex || 0;
 
-	// Check if this was a leg-winning throw
-	const wasLegWinner = player.score === 0 && lastThrow.multiplier === "double" && !lastThrow.wasBust;
-
-	// If this was a leg winner, decrement legs and reset scores
-	if (wasLegWinner) {
-		// Decrement legs won
+	// If it was a leg winner, handle leg transition
+	if (player.score === 0 && lastThrow.multiplier === "double" && !lastThrow.wasBust) {
 		player.legsWon--;
-
-		// If we're in a new leg, go back to previous leg
 		if (currentLeg.value > lastThrow.leg) {
 			currentLeg.value = lastThrow.leg;
-
-			// Remove the last leg starter since we're going back
 			legStarters.value.pop();
-
-			// Reset all players' scores to what they were
-			selectedPlayers.value.forEach((p) => {
-				const playerThrows = gameHistory.value.filter((t) => t.leg === lastThrow.leg && t.playerIndex === p.id);
-
-				if (playerThrows.length > 0) {
-					// Use the last throw's recorded score
-					p.score = playerThrows[playerThrows.length - 1].score;
-				} else {
-					// If no throws, use starting score for leg
-					p.score = gameType.value;
-				}
-			});
 		}
 	}
 
-	// Remove the throw from history
-	gameHistory.value.pop();
-
-	// Clear game state if we undid the winning throw
+	// Clear game state if needed
 	if (gameState.value) {
 		gameState.value = null;
 		gameSaved.value = false;
 	}
 
-	// Get all throws in current leg after removing the last throw
-	const throwsInCurrentLeg = gameHistory.value.filter((t) => t.leg === currentLeg.value);
-
-	if (throwsInCurrentLeg.length === 0) {
-		currentPlayerIndex.value = legStarters.value[currentLeg.value - 1];
-	} else {
-		// Count throws for each player in this leg
-		const throwsByPlayer = throwsInCurrentLeg.reduce(
-			(acc, t) => {
-				acc[t.playerIndex] = (acc[t.playerIndex] || 0) + 1;
-				return acc;
-			},
-			{} as Record<number, number>
-		);
-
-		// Get last throw in leg
-		const lastThrowInLeg = throwsInCurrentLeg[throwsInCurrentLeg.length - 1];
-
-		// Determine who should be the active player
-		if (lastThrowInLeg) {
-			// If there are throws in the leg
-			const lastPlayerThrows = throwsByPlayer[lastThrowInLeg.playerIndex] || 0;
-
-			if (lastPlayerThrows === 3) {
-				// If last player had 3 throws, stay on current player
-				// (which should be the next player)
-				return;
-			} else {
-				// Go back to the player with the last throw
-				currentPlayerIndex.value = lastThrowInLeg.playerIndex;
-			}
-		} else {
-			// If no throws in leg, set to leg starter
-			currentPlayerIndex.value = legStarters.value[currentLeg.value - 1];
-		}
-	}
-
-	// Restore the player's score
-	player.score = lastThrow.score;
+	// Update scores for all players
+	selectedPlayers.value.forEach((p) => {
+		const playerThrows = gameHistory.value.filter((t) => t.leg === currentLeg.value && t.playerIndex === p.id);
+		p.score = playerThrows.length > 0 ? playerThrows[playerThrows.length - 1].score : gameType.value;
+	});
 
 	// Reset multiplier
 	currentMultiplier.value = "single";
@@ -1056,8 +998,8 @@ const isUserInGame = computed(() => {
 
 // Helper functions to get winner and loser
 function getWinner() {
-	const legsNeededToWin = Math.ceil(numberOfLegs.value / 2);
-	return selectedPlayers.value.find((p) => p.legsWon >= legsNeededToWin);
+	const legsToWin = Math.ceil(numberOfLegs.value / 2);
+	return selectedPlayers.value.find((p) => p.legsWon >= legsToWin);
 }
 
 function getLoser() {
