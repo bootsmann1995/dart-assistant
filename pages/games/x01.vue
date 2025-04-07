@@ -1,382 +1,264 @@
 <template>
 	<div class="container mx-auto p-4 pb-20">
-		<div class="mb-8 space-y-4">
-			<h1 class="text-3xl font-bold">X01 Game Setup</h1>
+		<!-- Game Setup -->
+		<div v-if="!gameStarted" class="space-y-6 max-w-md mx-auto">
+			<h1 class="text-2xl md:text-3xl font-bold">X01 Game</h1>
 
-			<!-- Game Settings -->
-			<div class="mb-8 bg-white p-6 rounded-lg shadow">
-				<div v-if="!gameStarted" class="space-y-6">
-					<h2 class="text-2xl font-bold mb-4">Game Settings</h2>
-
-					<!-- Game Type Selection -->
-					<div class="space-y-2">
-						<label class="block font-medium">Game Type</label>
-						<select v-model="gameType" class="mt-1 p-2 border rounded w-full">
-							<option value="301">301</option>
-							<option value="501">501</option>
-						</select>
+			<div class="bg-white p-4 md:p-6 rounded-lg shadow space-y-6">
+				<!-- Game Type Selection -->
+				<div class="space-y-2">
+					<label class="block font-medium text-gray-700">Game Type</label>
+					<div class="grid grid-cols-2 gap-2">
+						<button
+							v-for="type in [301, 501]"
+							:key="type"
+							@click="gameType = type"
+							:class="[
+								'py-3 px-4 rounded-lg text-center font-medium transition-colors',
+								gameType === type
+									? 'bg-blue-600 text-white'
+									: 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+							]"
+						>
+							{{ type }}
+						</button>
 					</div>
+				</div>
 
-					<!-- Number of Legs -->
-					<div class="space-y-2">
-						<label class="block font-medium">Best of Legs</label>
-						<input
-							type="number"
-							v-model="numberOfLegs"
-							min="1"
-							step="2"
-							class="w-full p-2 border rounded"
-						/>
+				<!-- Number of Legs -->
+				<div class="space-y-2">
+					<label class="block font-medium text-gray-700">Best of Legs</label>
+					<div class="grid grid-cols-3 gap-2">
+						<button
+							v-for="legs in [1, 3, 5]"
+							:key="legs"
+							@click="numberOfLegs = legs"
+							:class="[
+								'py-3 px-4 rounded-lg text-center font-medium transition-colors',
+								numberOfLegs === legs
+									? 'bg-blue-600 text-white'
+									: 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+							]"
+						>
+							{{ legs }}
+						</button>
 					</div>
+				</div>
 
-					<!-- Player Selection -->
-					<div class="space-y-2">
-						<label class="block font-medium">Players</label>
-						<div class="space-y-2">
-							<div
-								v-for="(player, index) in selectedPlayers"
-								:key="player.id"
-								class="flex items-center gap-2"
-							>
-								<div class="flex-1 flex gap-2">
-									<input
-										type="text"
-										v-model="player.name"
-										class="flex-1 p-2 border rounded"
-										:placeholder="index === 0 ? 'Player name' : 'Guest player name'"
-									/>
-									<button
-										v-if="user && !isUserInGame"
-										@click="useCurrentUser(index)"
-										class="px-3 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-									>
-										Use My Account
-									</button>
-								</div>
+				<!-- Player Selection -->
+				<div class="space-y-3">
+					<label class="block font-medium text-gray-700">Players</label>
+					<div class="space-y-3">
+						<div
+							v-for="(player, index) in selectedPlayers"
+							:key="player.id"
+							class="bg-gray-50 p-3 rounded-lg space-y-2"
+						>
+							<div class="flex items-center justify-between">
+								<span class="font-medium">Player {{ index + 1 }}</span>
 								<button
 									v-if="index > 0"
 									@click="removePlayer(index)"
-									class="p-2 text-red-600 hover:text-red-800"
+									class="text-red-600 hover:text-red-800"
 								>
-									Remove
+									<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+									</svg>
+								</button>
+							</div>
+							<div class="flex flex-col gap-2">
+								<input
+									type="text"
+									v-model="player.name"
+									class="w-full p-3 border rounded-lg"
+									:placeholder="index === 0 ? 'Player name' : 'Guest player name'"
+								/>
+								<button
+									v-if="user && !isUserInGame"
+									@click="useCurrentUser(index)"
+									class="w-full py-2 px-3 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+								>
+									Use My Account
 								</button>
 							</div>
 						</div>
-						<button
-							@click="addPlayer"
-							class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-							:disabled="selectedPlayers.length >= 4"
-						>
-							Add Player
-						</button>
 					</div>
-
-					<!-- Start Game Button -->
 					<button
-						@click="startGame"
-						class="w-full p-3 bg-green-600 text-white rounded font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-700"
-						:disabled="!isValidGameSetup"
+						@click="addPlayer"
+						class="w-full py-3 px-4 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+						:disabled="selectedPlayers.length >= 4"
 					>
-						Start Game
+						Add Player
 					</button>
 				</div>
 
-				<div v-else class="text-center">
-					<button
-						@click="confirmCancelGame"
-						class="px-4 py-2 bg-red-600 text-white rounded font-medium hover:bg-red-700"
-					>
-						Cancel Game
-					</button>
-				</div>
-			</div>
-
-			<!-- Game Board (shown when game is started) -->
-			<div v-if="gameStarted" class="pb-20">
-				<!-- Game status -->
-				<div class="mb-4 text-lg">
-					<template v-if="winner">
-						<div class="text-2xl font-bold text-green-600 flex items-center gap-2">
-							<span class="text-3xl">🏆</span>
-							{{ winner }} wins!
-						</div>
-					</template>
-					<template v-else-if="isGameInProgress">
-						<div class="text-lg">
-							<span class="font-semibold">Leg {{ currentLeg }} of {{ numberOfLegs }}</span>
-							<span class="text-gray-600 ml-2"> (First to {{ Math.ceil(numberOfLegs / 2) }}) </span>
-						</div>
-					</template>
-				</div>
-
-				<!-- Match Status -->
-				<div class="bg-gray-100 p-4 rounded">
-					<h2 class="text-lg font-bold mb-2">Leg {{ currentLeg }} of {{ numberOfLegs }}</h2>
-					<div class="flex gap-4">
-						<div v-for="(player, index) in selectedPlayers" :key="player.id" class="flex-1">
-							<div class="flex items-center gap-2 mb-2">
-								<span class="font-medium text-lg">{{ player.name }}</span>
-								<span class="text-lg">{{ player.legsWon }} legs</span>
-							</div>
-							<div class="text-sm grid grid-cols-2 gap-x-4 gap-y-1 bg-white p-3 rounded">
-								<div class="font-medium">3-Dart Avg:</div>
-								<div>{{ getPlayerStats(index).average.toFixed(2) }}</div>
-								<div class="font-medium">First 9 Avg:</div>
-								<div>{{ getPlayerStats(index).first9Average.toFixed(2) }}</div>
-								<div class="font-medium">Best Leg:</div>
-								<div>
-									{{ getPlayerStats(index).bestLeg ? `${getPlayerStats(index).bestLeg} darts` : "-" }}
-								</div>
-								<div class="font-medium">Highest Finish:</div>
-								<div>{{ getPlayerStats(index).highestFinish || "-" }}</div>
-								<div class="font-medium">Checkout %:</div>
-								<div>{{ getPlayerStats(index).doublesPercentage.toFixed(0) }}%</div>
-								<div class="font-medium">60+:</div>
-								<div>{{ getPlayerStats(index).sixtyPlus }}</div>
-								<div class="font-medium">100+:</div>
-								<div>{{ getPlayerStats(index).hundredPlus }}</div>
-								<div class="font-medium">140+:</div>
-								<div>{{ getPlayerStats(index).oneFortyPlus }}</div>
-								<div class="font-medium">180s:</div>
-								<div>{{ getPlayerStats(index).oneEighties }}</div>
-								<div class="font-medium">Doubles:</div>
-								<div>
-									{{ getPlayerStats(index).doublesHit }}/{{
-										getPlayerStats(index).doublesAttempted
-									}}
-									({{ getPlayerStats(index).doublesPercentage.toFixed(0) }}%)
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-
-				<div class="grid grid-cols-2 gap-4">
-					<div
-						v-for="(player, index) in selectedPlayers"
-						:key="player.id"
-						:class="[
-							'mb-6 p-4 rounded-lg',
-							winner?.id === player.id ? 'bg-green-50 border-2 border-green-200' : 'bg-gray-100',
-						]"
-					>
-						<div class="flex items-start justify-between mb-2">
-							<div>
-								<h3 class="text-xl font-bold flex items-center gap-2">
-									{{ player.name }}
-									<span v-if="winner?.id === player.id" class="text-green-600 text-base">
-										Winner
-									</span>
-								</h3>
-								<p>Score: {{ player.score }}</p>
-								<p v-if="getPlayerStats(index).average">
-									Avg: {{ getPlayerStats(index).average.toFixed(2) }}
-								</p>
-								<p v-if="getLastRoundTotal(index)" class="text-sm text-gray-600">
-									Last Round: {{ getLastRoundTotal(index) }}
-								</p>
-							</div>
-							<div class="text-lg flex flex-col">
-								<span class="font-semibold">Legs: {{ player.legsWon }}</span>
-							</div>
-						</div>
-
-						<!-- Scoring Area (only show if game not finished) -->
-						<div v-if="currentPlayerIndex === index && !isGameFinished" class="mt-4">
-							<!-- Current throw display -->
-							<div class="mb-4 p-2 bg-gray-100 rounded">
-								<div class="flex justify-between items-center">
-									<div v-for="(dart, i) in currentTurnDarts" :key="i" class="text-lg">
-										{{ formatDart(dart) }}
-									</div>
-									<div class="font-bold">Total: {{ calculateTurnTotal() }}</div>
-								</div>
-							</div>
-
-							<!-- Multiplier buttons -->
-							<div class="grid grid-cols-3 gap-2 mb-4">
-								<button
-									v-for="multiplier in multipliers"
-									:key="multiplier"
-									@click="setMultiplier(multiplier.toLowerCase() as Multiplier)"
-									:disabled="isGameFinished"
-									:class="[
-										'px-4 py-2 rounded font-medium disabled:opacity-50 disabled:cursor-not-allowed',
-										currentMultiplier === multiplier.toLowerCase()
-											? 'bg-blue-600 text-white'
-											: 'bg-gray-200 hover:bg-gray-300',
-									]"
-								>
-									{{ multiplier }}
-								</button>
-							</div>
-
-							<!-- Number grid -->
-							<div class="grid grid-cols-5 gap-2">
-								<button
-									v-for="n in 20"
-									:key="n"
-									@click="addScore(n)"
-									:disabled="isGameFinished"
-									class="p-4 bg-gray-200 rounded hover:bg-gray-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-								>
-									{{ n }}
-								</button>
-								<button
-									@click="addScore(25)"
-									:disabled="isGameFinished"
-									class="p-4 bg-red-200 rounded hover:bg-red-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-								>
-									Bull
-								</button>
-								<button
-									@click="addScore(0)"
-									:disabled="isGameFinished"
-									class="p-4 bg-gray-200 rounded hover:bg-gray-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-								>
-									0
-								</button>
-							</div>
-						</div>
-
-						<!-- Player Stats (show detailed stats when game is finished) -->
-						<div v-if="isGameFinished" class="mt-4 space-y-2">
-							<div class="grid grid-cols-2 gap-x-4 gap-y-2 bg-gray-50 p-3 rounded text-sm">
-								<div class="font-medium">3-Dart Avg:</div>
-								<div>{{ getPlayerStats(index).average.toFixed(2) }}</div>
-								<div class="font-medium">First 9 Avg:</div>
-								<div>{{ getPlayerStats(index).first9Average.toFixed(2) }}</div>
-								<div class="font-medium">Best Leg:</div>
-								<div>
-									{{ getPlayerStats(index).bestLeg ? `${getPlayerStats(index).bestLeg} darts` : "-" }}
-								</div>
-								<div class="font-medium">Highest Finish:</div>
-								<div>{{ getPlayerStats(index).highestFinish || "-" }}</div>
-								<div class="font-medium">Checkout %:</div>
-								<div>{{ getPlayerStats(index).doublesPercentage.toFixed(0) }}%</div>
-								<div class="font-medium">60+:</div>
-								<div>{{ getPlayerStats(index).sixtyPlus }}</div>
-								<div class="font-medium">100+:</div>
-								<div>{{ getPlayerStats(index).hundredPlus }}</div>
-								<div class="font-medium">140+:</div>
-								<div>{{ getPlayerStats(index).oneFortyPlus }}</div>
-								<div class="font-medium">180s:</div>
-								<div>{{ getPlayerStats(index).oneEighties }}</div>
-								<div class="font-medium">Doubles:</div>
-								<div>
-									{{ getPlayerStats(index).doublesHit }}/{{
-										getPlayerStats(index).doublesAttempted
-									}}
-									({{ getPlayerStats(index).doublesPercentage.toFixed(0) }}%)
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-
-				<!-- Game Controls -->
-				<div class="mt-4 space-y-4">
-					<!-- Winner Display -->
-					<div v-if="isGameFinished" class="text-center bg-green-50 border border-green-200 p-4 rounded-lg">
-						<h3 class="text-xl font-bold text-green-800 mb-2">Game Over!</h3>
-						<p class="text-lg text-green-700">
-							Congratulations to <span class="font-bold">{{ getWinner()?.name }}</span
-							>!
-						</p>
-						<p class="text-sm text-green-600 mt-1">
-							Won {{ getWinner()?.legsWon }} - {{ getLoser()?.legsWon }}
-						</p>
-					</div>
-
-					<div class="flex justify-between items-center">
-						<!-- Undo button -->
-						<div class="flex gap-4">
-							<button
-								@click="undoLastThrow"
-								class="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed"
-								:disabled="gameHistory.length === 0"
-							>
-								Undo Last Throw
-							</button>
-							<!-- Only show Cancel Game during active gameplay -->
-							<button
-								v-if="!isGameFinished"
-								@click="confirmCancelGame"
-								class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-							>
-								Cancel Game
-							</button>
-						</div>
-
-						<!-- Game Over Actions -->
-						<div v-if="isGameFinished" class="flex gap-4">
-							<button
-								v-if="user && !gameSaved && gameState"
-								@click="saveGame"
-								class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-							>
-								Save Game
-							</button>
-							<button
-								@click="confirmCancelGame"
-								class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-							>
-								New Game
-							</button>
-						</div>
-					</div>
-				</div>
+				<!-- Start Game Button -->
+				<button
+					@click="startGame"
+					class="w-full py-4 bg-green-600 text-white rounded-lg font-medium text-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-700 transition-colors"
+					:disabled="!isValidGameSetup"
+				>
+					Start Game
+				</button>
 			</div>
 		</div>
-	</div>
 
-	<!-- Fixed Bottom Bar -->
-	<div
-		v-if="gameStarted && !isGameFinished && getCurrentPlayer.score <= 170"
-		class="fixed bottom-0 left-0 right-0 bg-gray-800 text-white p-4 shadow-lg"
-	>
-		<div class="container mx-auto">
-			<div v-if="getCheckoutSuggestion(getCurrentPlayer.score)" class="flex items-center justify-center gap-3">
-				<div class="flex items-center gap-2 text-yellow-400">
-					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-						<path
-							d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
-						/>
+		<!-- Game Board -->
+		<div v-else class="pb-20">
+			<!-- Game Header -->
+			<div class="flex items-center justify-between mb-4">
+				<div>
+					<h1 class="text-xl md:text-2xl font-bold">X01 Game</h1>
+					<p class="text-sm text-gray-600">Leg {{ currentLeg }} of {{ numberOfLegs }}</p>
+				</div>
+				<button
+					@click="confirmCancelGame"
+					class="p-2 text-red-600 hover:text-red-800"
+				>
+					<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
 					</svg>
-					<span class="font-medium">Checkout:</span>
-				</div>
+				</button>
+			</div>
 
-				<div class="flex items-center gap-2">
-					<template v-for="(dart, index) in getCheckoutSuggestion(getCurrentPlayer.score)" :key="index">
-						<span class="px-3 py-1 bg-gray-700 rounded-full border border-gray-600 font-medium">
-							{{ formatDartThrow(dart) }}
-						</span>
-						<span
-							v-if="index < getCheckoutSuggestion(getCurrentPlayer.score)!.length - 1"
-							class="text-gray-400"
-							>→</span
-						>
-					</template>
+			<!-- Winner Display -->
+			<div v-if="winner" class="mb-4 bg-green-50 border border-green-200 p-4 rounded-lg text-center">
+				<div class="text-2xl font-bold text-green-700 flex items-center justify-center gap-2">
+					<span class="text-3xl">🏆</span>
+					{{ winner }} wins!
+				</div>
+			</div>
+
+			<!-- Player Scorecards -->
+			<div class="space-y-4">
+				<div
+					v-for="(player, index) in selectedPlayers"
+					:key="player.id"
+					:class="[
+						'p-4 rounded-lg transition-colors',
+						currentPlayerIndex === index && !isGameFinished
+							? 'bg-blue-50 border-2 border-blue-200'
+							: winner?.id === player.id
+							? 'bg-green-50 border-2 border-green-200'
+							: 'bg-white border border-gray-200'
+					]"
+				>
+					<div class="flex items-center justify-between mb-2">
+						<div>
+							<h3 class="text-lg font-bold">{{ player.name }}</h3>
+							<div class="text-sm text-gray-600">
+								Legs: {{ player.legsWon }}/{{ Math.ceil(numberOfLegs / 2) }}
+							</div>
+						</div>
+						<div class="text-2xl font-bold">{{ player.score }}</div>
+					</div>
+
+					<!-- Player Stats -->
+					<div class="grid grid-cols-3 gap-2 text-sm mt-2">
+						<div class="bg-gray-50 p-2 rounded">
+							<div class="text-gray-600">Avg</div>
+							<div class="font-bold">{{ getPlayerStats(index).average.toFixed(1) }}</div>
+						</div>
+						<div class="bg-gray-50 p-2 rounded">
+							<div class="text-gray-600">First 9</div>
+							<div class="font-bold">{{ getPlayerStats(index).first9Average.toFixed(1) }}</div>
+						</div>
+						<div class="bg-gray-50 p-2 rounded">
+							<div class="text-gray-600">Checkout</div>
+							<div class="font-bold">{{ getCheckoutPercentage(index) }}%</div>
+						</div>
+					</div>
+
+					<!-- Current Player's Turn -->
+					<div v-if="currentPlayerIndex === index && !isGameFinished" class="mt-4">
+						<!-- Current Throw Display -->
+						<div class="bg-gray-50 p-3 rounded-lg mb-4">
+							<div class="grid grid-cols-4 gap-2 text-center">
+								<div v-for="(dart, i) in currentTurnDarts" :key="i" class="text-lg font-medium">
+									{{ formatDart(dart) }}
+								</div>
+								<div class="font-bold text-blue-600">
+									{{ calculateTurnTotal() }}
+								</div>
+							</div>
+						</div>
+
+						<!-- Multiplier Buttons -->
+						<div class="grid grid-cols-3 gap-2 mb-4">
+							<button
+								v-for="multiplier in multipliers"
+								:key="multiplier"
+								@click="setMultiplier(multiplier)"
+								:class="[
+									'py-3 rounded-lg font-medium transition-colors',
+									currentMultiplier === multiplier
+										? 'bg-blue-600 text-white'
+										: 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+								]"
+							>
+								{{ multiplier === 'single' ? 'Single' : multiplier === 'double' ? 'Double' : 'Triple' }}
+							</button>
+						</div>
+
+						<!-- Number Pad -->
+						<div class="grid grid-cols-3 gap-2">
+							<button
+								v-for="n in 20"
+								:key="n"
+								@click="addScore(n)"
+								class="py-4 bg-white border border-gray-200 rounded-lg text-lg font-medium hover:bg-gray-50 transition-colors active:bg-gray-100"
+							>
+								{{ n }}
+							</button>
+							<button
+								@click="addScore(25)"
+								class="py-4 bg-white border border-gray-200 rounded-lg text-lg font-medium hover:bg-gray-50 transition-colors active:bg-gray-100"
+							>
+								Bull
+							</button>
+							<button
+								@click="addScore(0)"
+								class="py-4 bg-white border border-gray-200 rounded-lg text-lg font-medium hover:bg-gray-50 transition-colors active:bg-gray-100"
+							>
+								Miss
+							</button>
+						</div>
+					</div>
+
+					<!-- Last Round Info -->
+					<div v-if="getLastRoundTotal(index)" class="mt-2 text-sm text-gray-600">
+						Last Round: {{ getLastRoundTotal(index) }}
+					</div>
 				</div>
 			</div>
 		</div>
-	</div>
 
-	<!-- Current turn display -->
-	<div v-if="isGameInProgress && gameStarted" class="fixed bottom-0 left-0 right-0 bg-gray-800 text-white p-4">
-		<div class="container mx-auto max-w-4xl">
-			<div class="flex items-center justify-between">
-				<div class="text-lg">
-					<span class="font-semibold">{{ selectedPlayers[currentPlayerIndex].name }}'s Turn:</span>
-					<span class="ml-2">
-						<template v-if="currentTurnDisplay.length === 0"> First dart </template>
-						<template v-else>
-							{{ currentTurnDisplay.join(" - ") }}
-							<span v-if="wasTurnBusted" class="text-red-400 ml-2">(Bust)</span>
-						</template>
-					</span>
+		<!-- Fixed Bottom Bar -->
+		<div
+			v-if="gameStarted && !isGameFinished && getCurrentPlayer.score <= 170"
+			class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4"
+		>
+			<div class="max-w-md mx-auto">
+				<div v-if="getCheckoutSuggestion(getCurrentPlayer.score)" class="mb-2">
+					<div class="text-sm font-medium text-gray-600">Checkout Suggestion:</div>
+					<div class="text-lg font-bold">
+						{{ getCheckoutSuggestion(getCurrentPlayer.score)?.join(' - ') }}
+					</div>
 				</div>
-				<div class="text-xl font-bold">Score: {{ selectedPlayers[currentPlayerIndex].score }}</div>
+				<div class="grid grid-cols-2 gap-2">
+					<button
+						@click="undoLastThrow"
+						class="py-3 px-4 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+					>
+						Undo Last
+					</button>
+					<button
+						@click="moveToNextPlayer"
+						class="py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+					>
+						Next Player
+					</button>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -412,6 +294,7 @@ interface PlayerState {
 	score: number;
 	legsWon: number;
 	id: number;
+	user_id?: string; // Add optional user_id field
 }
 
 interface GameState {
@@ -421,6 +304,7 @@ interface GameState {
 		name: string;
 		score: number;
 		legsWon: number;
+		user_id?: string; // Add optional user_id field to GameState players
 	}[];
 	history: DartThrow[];
 	stats: {
@@ -434,14 +318,26 @@ const gameType = ref(501);
 const numberOfLegs = ref(3); // Default to best of 3
 const currentLeg = ref(1);
 const selectedPlayers = ref<PlayerState[]>([
-	{ id: 0, name: "", score: gameType.value, legsWon: 0 },
-	{ id: 1, name: "", score: gameType.value, legsWon: 0 },
+	{
+		name: "",
+		score: gameType.value,
+		legsWon: 0,
+		id: 0,
+		user_id: undefined, // Initialize with undefined user_id
+	},
+	{
+		name: "",
+		score: gameType.value,
+		legsWon: 0,
+		id: 1,
+		user_id: undefined, // Initialize with undefined user_id
+	},
 ]);
 const gameStarted = ref(false);
 const currentPlayerIndex = ref(0);
 const gameHistory = ref<DartThrow[]>([]);
 const currentMultiplier = ref<Multiplier>("single");
-const multipliers = ["Single", "Double", "Triple"] as const;
+const multipliers = ["single", "double", "triple"] as const;
 const gameSaved = ref(false);
 const gameState = ref<GameState | null>(null);
 const turnStartScore = ref(0);
@@ -493,6 +389,9 @@ interface PlayerStats {
 	oneFortyPlus: number;
 	hundredPlus: number;
 	sixtyPlus: number;
+	checkoutAttempts: number;
+	checkoutSuccesses: number;
+	checkoutPercentage: number;
 }
 
 function getPlayerStats(playerId: number): PlayerStats {
@@ -610,49 +509,50 @@ function getPlayerStats(playerId: number): PlayerStats {
 	});
 	const highestFinish = finishes.length > 0 ? finishes[finishes.length - 1] : null;
 
-	// Calculate doubles statistics
-	const doubleAttempts = allLegs.flatMap((leg) =>
-		leg.turns.filter(
-			(throw_) =>
-				throw_.playerIndex === playerId &&
-				throw_.multiplier === "double" &&
-				(throw_.score - throw_.value * 2 === 0 || // Would finish
-					throw_.score <= 50) // Within finishing range
-		)
-	);
+	// Calculate doubles statistics (all double attempts)
+	const doubleAttempts = gameHistory.value.filter((throw_) => {
+		return throw_.playerIndex === playerId && throw_.multiplier === "double";
+	}).length;
 
-	const doublesHit = completedLegs.length;
-	const doublesAttempted = doubleAttempts.length;
-	const doublesPercentage = doublesAttempted > 0 ? (doublesHit / doublesAttempted) * 100 : 0;
+	// Calculate checkout statistics
+	const checkoutAttempts = gameHistory.value.filter((throw_) => {
+		if (throw_.playerIndex !== playerId) return false;
+    
+		// Count as attempt if score can be finished with a double
+		// This includes:
+		// 1. Any score <= 40 that's even (can finish with a double)
+		// 2. Score of 50 (can finish with Bull)
+		return (throw_.score <= 40 && throw_.score % 2 === 0) || throw_.score === 50;
+	}).length;
 
-	// Count scores by range
-	const scoreCounts = allTurns.reduce(
-		(counts, turn) => {
-			const score = turn.reduce((sum, dart) => sum + dart.value * multiplierValues[dart.multiplier], 0);
+	const checkoutSuccesses = gameHistory.value.filter((throw_) => {
+		// Count successful checkouts (score becomes 0 with a double)
+		return throw_.playerIndex === playerId && 
+               throw_.multiplier === "double" && 
+               throw_.score - (throw_.value * 2) === 0;
+	}).length;
 
-			if (score === 180) counts.oneEighties++;
-			else if (score >= 140) counts.oneFortyPlus++;
-			else if (score >= 100) counts.hundredPlus++;
-			else if (score >= 60) counts.sixtyPlus++;
-			return counts;
-		},
-		{
-			oneEighties: 0,
-			oneFortyPlus: 0,
-			hundredPlus: 0,
-			sixtyPlus: 0,
-		}
-	);
+	// Calculate checkout percentage as hits / (hits + misses)
+	const missedCheckouts = checkoutAttempts - checkoutSuccesses;
+	const checkoutPercentage = checkoutSuccesses > 0 
+		? (checkoutSuccesses / (checkoutSuccesses + missedCheckouts)) * 100 
+		: 0;
 
 	return {
 		average,
 		first9Average,
 		bestLeg,
 		highestFinish,
-		doublesPercentage,
-		doublesHit,
-		doublesAttempted,
-		...scoreCounts,
+		doublesPercentage: doubleAttempts > 0 ? (checkoutSuccesses / doubleAttempts) * 100 : 0,
+		doublesHit: checkoutSuccesses,
+		doublesAttempted: doubleAttempts,
+		checkoutAttempts: checkoutSuccesses + missedCheckouts,  // Total attempts (hits + misses)
+		checkoutSuccesses,
+		checkoutPercentage,  // Add this to the stats
+		oneEighties: 0,
+		oneFortyPlus: 0,
+		hundredPlus: 0,
+		sixtyPlus: 0,
 	};
 }
 
@@ -663,6 +563,7 @@ function addPlayer() {
 			score: gameType.value,
 			legsWon: 0,
 			id: selectedPlayers.value.length,
+			user_id: undefined, // Initialize with undefined user_id
 		});
 	}
 }
@@ -834,6 +735,7 @@ function addScore(value: number) {
 
 		// Check if player has won the match
 		const legsToWin = Math.ceil(numberOfLegs.value / 2);
+
 		if (currentPlayer.legsWon >= legsToWin) {
 			// Prepare game state immediately when game is won
 			gameState.value = prepareGameState();
@@ -925,11 +827,8 @@ function undoLastThrow() {
 	// Get all throws in current leg after removing the last throw
 	const throwsInCurrentLeg = gameHistory.value.filter((t) => t.leg === currentLeg.value);
 
-	// If we just undid a bust, go back to that player
-	if (lastThrow.wasBust) {
-		currentPlayerIndex.value = lastThrow.playerIndex;
-		// Reset bust flag since we're undoing the bust
-		wasTurnBusted.value = false;
+	if (throwsInCurrentLeg.length === 0) {
+		currentPlayerIndex.value = legStarters.value[currentLeg.value - 1];
 	} else {
 		// Count throws for each player in this leg
 		const throwsByPlayer = throwsInCurrentLeg.reduce(
@@ -1079,6 +978,7 @@ function prepareGameState(): GameState {
 			name: p.name,
 			score: p.score,
 			legsWon: p.legsWon,
+			user_id: p.user_id, // Add user_id to GameState players
 		})),
 		history: gameHistory.value,
 		stats: Object.fromEntries(selectedPlayers.value.map((_, index) => [index, getPlayerStats(index)])),
@@ -1112,8 +1012,9 @@ async function checkLegWinner() {
 }
 
 function useCurrentUser(playerIndex: number) {
-	if (user.value?.email) {
+	if (user.value?.email && user.value?.id) {
 		selectedPlayers.value[playerIndex].name = user.value.email;
+		selectedPlayers.value[playerIndex].user_id = user.value.id; // Set user_id when using current user
 	}
 }
 
@@ -1373,17 +1274,13 @@ function formatLastThrow(throw_: DartThrow | null): string {
 		triple: "T",
 	}[throw_.multiplier];
 
-	return throw_.value === 25 && throw_.multiplier === "double"
-		? "Bull"
-		: `${multiplierSymbol}${throw_.value}`;
+	return throw_.value === 25 && throw_.multiplier === "double" ? "Bull" : `${multiplierSymbol}${throw_.value}`;
 }
 
 // Get last round total for a player
 function getLastRoundTotal(playerIndex: number): number | null {
 	// Get all throws in current leg for this player
-	const throwsInLeg = gameHistory.value.filter(
-		(t) => t.leg === currentLeg.value && t.playerIndex === playerIndex
-	);
+	const throwsInLeg = gameHistory.value.filter((t) => t.leg === currentLeg.value && t.playerIndex === playerIndex);
 
 	if (throwsInLeg.length === 0) return null;
 
@@ -1406,5 +1303,10 @@ function getLastRoundTotal(playerIndex: number): number | null {
 		const multiplierValue = dart.multiplier === "triple" ? 3 : dart.multiplier === "double" ? 2 : 1;
 		return total + dart.value * multiplierValue;
 	}, 0);
+}
+
+function getCheckoutPercentage(playerIndex: number): string {
+	const stats = getPlayerStats(playerIndex);
+	return stats.checkoutPercentage.toFixed(1);
 }
 </script>

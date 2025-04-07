@@ -2,7 +2,11 @@ export const useGamesStatusX01 = () => {
     const { getClient, isAuthenticatedAsync } = useAuth();
     
     const getGamesBasedOnUserAsync = async (userId: string) => {
-        return await getClient().from('games-x01').select('*').eq('user_id', userId)
+        return await getClient().from('games-x01').select('*').eq('user_id', userId).order('created_at', { ascending: false })
+    }
+
+    const getGameByIdAsync = async (gameId: string) => {
+        return await getClient().from('games-x01').select('*').eq('id', gameId).single()
     }
 
     const saveGameAsync = async (userId: string, game: any) => {
@@ -19,6 +23,7 @@ export const useGamesStatusX01 = () => {
     
     return {
         getGamesBasedOnUserAsync,
+        getGameByIdAsync,
         saveGameAsync
     }
 }
