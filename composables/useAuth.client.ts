@@ -36,7 +36,8 @@ export const useAuth = () => {
 
     const isAuthenticatedAsync = async () => {
         const isLoggedIn = await getClient().auth.getSession()
-        if(isLoggedIn.data) {
+        console.log("isAuthenticatedAsync", isLoggedIn);
+        if(isLoggedIn.data && isLoggedIn.data.session && isLoggedIn.data.session != null) {
             return true;
         }
         return false;

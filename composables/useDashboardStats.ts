@@ -14,6 +14,7 @@ interface GameStats {
     totalGames: number;
     gamesWon: number;
     bestLegAverage: number;
+    bestLegDarts: number;
     scores180: number;
     scores140Plus: number;
     scores100Plus: number;
@@ -57,6 +58,7 @@ export const useDashboardStats = () => {
         let checkoutSuccesses = 0;
         let gamesWon = 0;
         let bestLegAverage = 0;
+        let bestLegDarts = Infinity;
         let totalFirst9Score = 0;
         let totalFirst9Rounds = 0;
         let scores180 = 0;
@@ -99,7 +101,10 @@ export const useDashboardStats = () => {
                 if (throw_.leg !== currentLeg) {
                     if (legDarts > 0) {
                         const legAverage = (legScore / legDarts) * 3;
-                        bestLegAverage = Math.max(bestLegAverage, legAverage);
+                        if (legAverage > bestLegAverage) {
+                            bestLegAverage = legAverage;
+                            bestLegDarts = legDarts;
+                        }
                         totalScore += legScore;
                         totalDarts += legDarts;
                     }
@@ -158,7 +163,10 @@ export const useDashboardStats = () => {
             // Add final leg stats
             if (legDarts > 0) {
                 const legAverage = (legScore / legDarts) * 3;
-                bestLegAverage = Math.max(bestLegAverage, legAverage);
+                if (legAverage > bestLegAverage) {
+                    bestLegAverage = legAverage;
+                    bestLegDarts = legDarts;
+                }
                 totalScore += legScore;
                 totalDarts += legDarts;
             }
@@ -216,6 +224,7 @@ export const useDashboardStats = () => {
             totalGames: recentGames.length,
             gamesWon,
             bestLegAverage,
+            bestLegDarts,
             scores180,
             scores140Plus,
             scores100Plus,
