@@ -80,7 +80,15 @@
 							class="bg-gray-50 p-3 rounded-lg space-y-2"
 						>
 							<div class="flex items-center justify-between">
-								<span class="font-medium">Player {{ index + 1 }}</span>
+								<div class="flex items-center gap-2">
+									<img
+										v-if="player.avatar"
+										:src="player.avatar"
+										:alt="`${player.name}'s avatar`"
+										class="w-8 h-8 rounded-full object-cover"
+									/>
+									<span class="font-medium">Player {{ index + 1 }}</span>
+								</div>
 								<button
 									v-if="index > 0"
 									@click="removePlayer(index)"
@@ -154,57 +162,49 @@
 			</div>
 
 			<!-- Player Scorecards List -->
-			<div class="space-y-4 mb-6">
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
 				<div
 					v-for="(player, index) in selectedPlayers"
-					:key="player.id"
+					:key="index"
 					:class="[
-						'p-4 rounded-lg transition-colors',
-						currentPlayerIndex === index && !isGameFinished
-							? 'bg-blue-50 border-2 border-blue-200'
-							: winner?.id === player.id
-								? 'bg-green-50 border-2 border-green-200'
-								: 'bg-white border border-gray-200',
+						'bg-white border p-4 rounded-lg',
+						currentPlayerIndex === index ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-200',
 					]"
 				>
-					<!-- Player Header -->
-					<div class="flex items-center justify-between mb-2">
-						<div>
-							<h3 class="text-lg font-bold">{{ player.name }}</h3>
-							<div class="text-sm text-gray-600">
-								Legs: {{ player.legsWon }}/{{ Math.ceil(numberOfLegs / 2) }}
+					<div class="flex items-center gap-2 mb-2">
+						<img
+							v-if="player.avatar"
+							:src="player.avatar"
+							:alt="`${player.name}'s avatar`"
+							class="w-8 h-8 rounded-full object-cover"
+						/>
+						<div class="flex-1">
+							<div class="flex items-center justify-between">
+								<span class="font-medium">{{ player.name }}</span>
+								<span class="text-lg font-bold">{{ player.score }}</span>
+							</div>
+							<div class="flex items-center justify-between text-sm text-gray-600">
+								<span>Legs won: {{ player.legsWon }}</span>
+								<span>Checkout: {{ getCheckoutPercentage(index) }}</span>
 							</div>
 						</div>
-						<div class="text-2xl font-bold">{{ player.score }}</div>
 					</div>
-
-					<!-- Player Stats -->
-					<div class="grid grid-cols-3 gap-2 text-sm mt-2">
-						<div class="bg-gray-50 p-2 rounded">
-							<div class="text-gray-600">Avg</div>
-							<div class="font-bold">{{ getPlayerStats(index).average.toFixed(1) }}</div>
-						</div>
-						<div class="bg-gray-50 p-2 rounded">
-							<div class="text-gray-600">First 9</div>
-							<div class="font-bold">{{ getPlayerStats(index).first9Average.toFixed(1) }}</div>
-						</div>
-						<div class="bg-gray-50 p-2 rounded">
-							<div class="text-gray-600">Checkout</div>
-							<div class="font-bold">{{ getCheckoutPercentage(index) }}%</div>
-						</div>
-					</div>
-
-					<!-- Last Round Info -->
-					<div v-if="getLastRoundTotal(index)" class="mt-2 text-sm text-gray-600">
-						Last Round: {{ getLastRoundTotal(index) }}
+					<div class="text-sm text-gray-600">
+						Last throw: {{ formatLastTurn(index) }}
 					</div>
 				</div>
 			</div>
 
-			<!-- Shared Score Calculator -->
+			<!-- Score Calculator and Game Controls -->
 			<div v-if="!isGameFinished" class="bg-white border border-gray-200 rounded-lg p-3">
 				<div class="mb-3">
-					<h3 class="text-base font-bold mb-1">
+					<h3 class="flex items-center gap-2 text-base font-bold mb-1">
+						<img
+							v-if="selectedPlayers[currentPlayerIndex].avatar"
+							:src="selectedPlayers[currentPlayerIndex].avatar"
+							:alt="`${selectedPlayers[currentPlayerIndex].name}'s avatar`"
+							class="w-8 h-8 rounded-full object-cover"
+						/>
 						{{ selectedPlayers[currentPlayerIndex].name }}
 						<span class="text-gray-600">({{ selectedPlayers[currentPlayerIndex].score }})</span>
 					</h3>
@@ -283,14 +283,30 @@
 					</div>
 				</div>
 
-				<!-- Winner Display -->
-				<div v-if="winner" class="mb-4 bg-green-50 border border-green-200 p-4 rounded-lg text-center">
+				
+			</div>
+			<!-- Winner Display -->
+			<div v-if="isGameFinished && winner" class="mb-4 bg-green-50 border border-green-200 p-4 rounded-lg text-center">
 					<div class="text-2xl font-bold text-green-700 flex items-center justify-center gap-2">
 						<span class="text-3xl">🏆</span>
-						{{ winner }} wins!
+						{{ winner.name }} wins!
+					</div>
+					<div class="flex gap-2 justify-center mt-4">
+						<button
+							v-if="!gameSaved"
+							@click="saveGame"
+							class="py-2 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+						>
+							Save Game
+						</button>
+						<button
+							@click="confirmCancelGame"
+							class="py-2 px-4 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+						>
+							New Game
+						</button>
 					</div>
 				</div>
-			</div>
 		</div>
 	</div>
 </template>
@@ -303,16 +319,25 @@ definePageMeta({
 });
 
 const { getUserAsync } = useAuth();
-const user = ref<User | null>(null);
+const user = ref();
 
 onMounted(async () => {
 	const resp = await getUserAsync();
 	if (resp?.user) {
-		user.value = resp.user;
+		user.value = {...resp.user, metadata: resp.metadata};
 	}
 });
 
 type Multiplier = "single" | "double" | "triple";
+
+interface PlayerState {
+	name: string;
+	score: number;
+	legsWon: number;
+	id: number;
+	user_id?: string;
+	avatar?: string;
+}
 
 interface DartThrow {
 	value: number;
@@ -324,14 +349,6 @@ interface DartThrow {
 	turnIndex?: number; // Track which turn this dart belongs to
 }
 
-interface PlayerState {
-	name: string;
-	score: number;
-	legsWon: number;
-	id: number;
-	user_id?: string; // Add optional user_id field
-}
-
 interface GameState {
 	gameType: number;
 	numberOfLegs: number;
@@ -339,7 +356,8 @@ interface GameState {
 		name: string;
 		score: number;
 		legsWon: number;
-		user_id?: string; // Add optional user_id field to GameState players
+		user_id?: string;
+		avatar?: string;
 	}[];
 	history: DartThrow[];
 	stats: {
@@ -358,14 +376,16 @@ const selectedPlayers = ref<PlayerState[]>([
 		score: gameType.value,
 		legsWon: 0,
 		id: 0,
-		user_id: undefined, // Initialize with undefined user_id
+		user_id: undefined,
+		avatar: undefined,
 	},
 	{
 		name: "",
 		score: gameType.value,
 		legsWon: 0,
 		id: 1,
-		user_id: undefined, // Initialize with undefined user_id
+		user_id: undefined,
+		avatar: undefined,
 	},
 ]);
 const gameStarted = ref(false);
@@ -597,7 +617,8 @@ function addPlayer() {
 			score: gameType.value,
 			legsWon: 0,
 			id: selectedPlayers.value.length,
-			user_id: undefined, // Initialize with undefined user_id
+			user_id: undefined,
+			avatar: undefined,
 		});
 	}
 }
@@ -949,7 +970,8 @@ function prepareGameState(): GameState {
 			name: p.name,
 			score: p.score,
 			legsWon: p.legsWon,
-			user_id: p.user_id, // Add user_id to GameState players
+			user_id: p.user_id,
+			avatar: p.avatar,
 		})),
 		history: gameHistory.value,
 		stats: Object.fromEntries(selectedPlayers.value.map((_, index) => [index, getPlayerStats(index)])),
@@ -983,9 +1005,11 @@ async function checkLegWinner() {
 }
 
 function useCurrentUser(playerIndex: number) {
-	if (user.value?.email && user.value?.id) {
-		selectedPlayers.value[playerIndex].name = user.value.email;
-		selectedPlayers.value[playerIndex].user_id = user.value.id; // Set user_id when using current user
+	if (user.value?.email) {
+		const displayName = user.value.metadata?.nick_name || user.value.email;
+		selectedPlayers.value[playerIndex].name = displayName;
+		selectedPlayers.value[playerIndex].user_id = user.value.metadata?.user_id;
+		selectedPlayers.value[playerIndex].avatar = user.value.metadata?.avatar;
 	}
 }
 
@@ -1021,8 +1045,8 @@ async function saveGame() {
 
 // Computed property to check if the logged-in user is already in the game
 const isUserInGame = computed(() => {
-	if (!user.value) return false;
-	return selectedPlayers.value.some((player) => player.name === user.value?.email);
+	if (!user.value?.metadata?.user_id) return false;
+	return selectedPlayers.value.some((player) => player.user_id === user.value.metadata.user_id);
 });
 
 // Helper functions to get winner and loser
@@ -1236,6 +1260,25 @@ function getLastThrow(playerIndex: number): DartThrow | null {
 	return playerThrows.length > 0 ? playerThrows[playerThrows.length - 1] : null;
 }
 
+// Get last turn for a player
+function getLastTurn(playerIndex: number): DartThrow[] {
+	const throwsInLeg = gameHistory.value.filter((t) => t.leg === currentLeg.value && t.playerIndex === playerIndex);
+	if (throwsInLeg.length === 0) return [];
+
+	// Group by turn index
+	const turns = throwsInLeg.reduce((groups: DartThrow[][], throw_) => {
+		const turnIndex = throw_.turnIndex ?? 0;
+		if (!groups[turnIndex]) {
+			groups[turnIndex] = [];
+		}
+		groups[turnIndex].push(throw_);
+		return groups;
+	}, []);
+
+	// Get the last turn
+	return turns[turns.length - 1] || [];
+}
+
 // Format last throw score
 function formatLastThrow(throw_: DartThrow | null): string {
 	if (!throw_) return "-";
@@ -1246,6 +1289,20 @@ function formatLastThrow(throw_: DartThrow | null): string {
 	}[throw_.multiplier];
 
 	return throw_.value === 25 && throw_.multiplier === "double" ? "Bull" : `${multiplierSymbol}${throw_.value}`;
+}
+
+// Format a complete turn
+function formatLastTurn(playerIndex: number): string {
+	const lastTurn = getLastTurn(playerIndex);
+	if (lastTurn.length === 0) return "-";
+	
+	const darts = lastTurn.map(formatLastThrow).join(" ");
+	const total = lastTurn.reduce((sum, dart) => {
+		const multiplierValue = dart.multiplier === "triple" ? 3 : dart.multiplier === "double" ? 2 : 1;
+		return sum + dart.value * multiplierValue;
+	}, 0);
+	
+	return `${darts} (${total})`;
 }
 
 // Get last round total for a player
@@ -1281,4 +1338,3 @@ function getCheckoutPercentage(playerIndex: number): string {
 	return stats.checkoutPercentage.toFixed(1);
 }
 </script>
-

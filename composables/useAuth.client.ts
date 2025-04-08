@@ -35,7 +35,6 @@ export const useAuth = () => {
     }
 
     const getUserAsync = async () => {
-       
         const { data, error } = await getClient().auth.getUser()
         let metadata: UserMetadata | null = null;
         if(data.user && data.user.email) {
@@ -49,7 +48,6 @@ export const useAuth = () => {
         }
         if(data && data.user) {
             user.value = {...data, metadata: metadata};
-            console.log("USER", user.value);
             return {...data, metadata}
         }
         
