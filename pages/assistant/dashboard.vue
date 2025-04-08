@@ -1,10 +1,14 @@
 <template>
 	<div class="container mx-auto p-4 md:p-6">
 		<div class="flex flex-col md:flex-row items-center justify-between mb-6 gap-4">
-			<h1 class="text-2xl md:text-3xl font-bold">Welcome, {{ userName || 'Player' }}!</h1>
+			<h1 class="text-2xl md:text-3xl font-bold">Welcome, {{ userName || "Player" }}!</h1>
 		</div>
 
-		<div v-if="isLoading" class="text-center py-8">
+		<div v-if="!isAuthenticated" class="text-center py-8">
+			<p class="text-gray-600">Please log in to view your statistics.</p>
+		</div>
+
+		<div v-else-if="isLoading" class="text-center py-8">
 			<div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
 			<p class="mt-4 text-gray-600">Loading your statistics...</p>
 		</div>
@@ -97,6 +101,37 @@
 				</div>
 			</div>
 
+			<!-- Game Invites Section -->
+			<div v-if="gameInvites.length > 0" class="bg-white rounded-lg shadow p-4 md:p-6">
+				<h2 class="text-lg md:text-xl font-semibold mb-4">Game Invites</h2>
+				<div class="space-y-4">
+					<div
+						v-for="invite in gameInvites"
+						:key="invite.id"
+						class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+					>
+						<div>
+							<span class="font-medium">{{ invite.sender.nick_name || invite.sender.email }}</span>
+							<span class="text-sm text-gray-600"> invited you to play X01</span>
+						</div>
+						<div class="flex gap-2">
+							<button
+								@click="handleInvite(invite.id, 'accepted')"
+								class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+							>
+								Accept
+							</button>
+							<button
+								@click="handleInvite(invite.id, 'declined')"
+								class="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+							>
+								Decline
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+
 			<!-- Quick Tips Section -->
 			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 				<!-- Strengths Card -->
@@ -174,8 +209,15 @@
 </template>
 
 <script setup lang="ts">
-import { useDashboardStats } from "~/composables/useDashboardStats";
-import { useUserData } from "~/composables/useUserData";
+interface GameInvite {
+	id: string;
+	sender: {
+		nick_name?: string;
+		email: string;
+	};
+	status: string;
+	created_at: string;
+}
 
 definePageMeta({
 	middleware: "auth",
@@ -184,24 +226,40 @@ definePageMeta({
 const { calculateStats } = useDashboardStats();
 const { getUserAsync } = useAuth();
 const { getUserDataAsync } = useUserData();
+const { isAuthenticatedAsync } = useAuth();
+const { getGameInvitesAsync, updateGameInviteStatusAsync } = useGamesStatusX01();
+
 const stats = ref<any>(null);
 const userName = ref("");
 const isLoading = ref(true);
+const isAuthenticated = ref(false);
+const gameInvites = ref<GameInvite[]>([]);
 
 onMounted(async () => {
+	isAuthenticated.value = await isAuthenticatedAsync();
 	try {
 		stats.value = await calculateStats();
 		const userResp = await getUserAsync();
-		if (userResp?.user?.id) {
-			const userData = await getUserDataAsync(userResp.user.id);
-			if (userData) {
-				userName.value = userData.nick_name || userData.full_name || userData.email;
-			} else if (userResp.user.email) {
-				userName.value = userResp.user.email.split('@')[0];
-			}
+		const userData = await getUserDataAsync(userResp?.user?.id);
+		if (userData) {
+			userName.value = userData.nick_name || userResp?.user?.email || "";
 		}
+		// Fetch game invites
+		gameInvites.value = await getGameInvitesAsync();
+	} catch (error) {
+		console.error("Error loading dashboard:", error);
 	} finally {
 		isLoading.value = false;
 	}
 });
+
+async function handleInvite(inviteId: string, action: "accepted" | "declined") {
+	try {
+		await updateGameInviteStatusAsync(inviteId, action);
+		// Remove the invite from the list
+		gameInvites.value = gameInvites.value.filter((invite) => invite.id !== inviteId);
+	} catch (error) {
+		console.error("Error handling invite:", error);
+	}
+}
 </script>

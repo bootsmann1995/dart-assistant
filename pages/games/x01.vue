@@ -90,7 +90,7 @@
 									<span class="font-medium">Player {{ index + 1 }}</span>
 								</div>
 								<button
-									v-if="index > 0"
+									v-if="index > 0 && !player.user_id"
 									@click="removePlayer(index)"
 									class="text-red-600 hover:text-red-800"
 								>
@@ -189,9 +189,7 @@
 							</div>
 						</div>
 					</div>
-					<div class="text-sm text-gray-600">
-						Last throw: {{ formatLastTurn(index) }}
-					</div>
+					<div class="text-sm text-gray-600">Last throw: {{ formatLastTurn(index) }}</div>
 				</div>
 			</div>
 
@@ -282,38 +280,37 @@
 						</button>
 					</div>
 				</div>
-
-				
 			</div>
 			<!-- Winner Display -->
-			<div v-if="isGameFinished && winner" class="mb-4 bg-green-50 border border-green-200 p-4 rounded-lg text-center">
-					<div class="text-2xl font-bold text-green-700 flex items-center justify-center gap-2">
-						<span class="text-3xl">🏆</span>
-						{{ winner.name }} wins!
-					</div>
-					<div class="flex gap-2 justify-center mt-4">
-						<button
-							v-if="!gameSaved"
-							@click="saveGame"
-							class="py-2 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-						>
-							Save Game
-						</button>
-						<button
-							@click="confirmCancelGame"
-							class="py-2 px-4 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
-						>
-							New Game
-						</button>
-					</div>
+			<div
+				v-if="isGameFinished && winner"
+				class="mb-4 bg-green-50 border border-green-200 p-4 rounded-lg text-center"
+			>
+				<div class="text-2xl font-bold text-green-700 flex items-center justify-center gap-2">
+					<span class="text-3xl">🏆</span>
+					{{ winner.name }} wins!
 				</div>
+				<div class="flex gap-2 justify-center mt-4">
+					<button
+						v-if="!gameSaved"
+						@click="saveGame"
+						class="py-2 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+					>
+						Save Game
+					</button>
+					<button
+						@click="confirmCancelGame"
+						class="py-2 px-4 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+					>
+						New Game
+					</button>
+				</div>
+			</div>
 		</div>
 	</div>
 </template>
 
 <script setup lang="ts">
-import type { User } from "@supabase/supabase-js";
-
 definePageMeta({
 	middleware: "auth",
 });
@@ -324,7 +321,7 @@ const user = ref();
 onMounted(async () => {
 	const resp = await getUserAsync();
 	if (resp?.user) {
-		user.value = {...resp.user, metadata: resp.metadata};
+		user.value = { ...resp.user, metadata: resp.metadata };
 	}
 });
 
@@ -452,14 +449,22 @@ interface PlayerStats {
 function getPlayerStats(playerId: number): PlayerStats {
 	// Get all legs for this player across all legs
 	const allLegs = gameHistory.value
-		.reduce((legs: { turns: DartThrow[] }[], throw_) => {
-			const legIndex = throw_.leg - 1;
-			if (!legs[legIndex]) {
-				legs[legIndex] = { turns: [] };
-			}
-			legs[legIndex].turns.push(throw_);
-			return legs;
-		}, [])
+		.reduce(
+			(
+				legs: Array<{
+					turns: DartThrow[];
+				}>,
+				throw_
+			) => {
+				const legIndex = throw_.leg - 1;
+				if (!legs[legIndex]) {
+					legs[legIndex] = { turns: [] };
+				}
+				legs[legIndex].turns.push(throw_);
+				return legs;
+			},
+			[]
+		)
 		.filter((leg) => leg !== undefined);
 
 	// Get completed legs (where player won)
@@ -1295,13 +1300,13 @@ function formatLastThrow(throw_: DartThrow | null): string {
 function formatLastTurn(playerIndex: number): string {
 	const lastTurn = getLastTurn(playerIndex);
 	if (lastTurn.length === 0) return "-";
-	
+
 	const darts = lastTurn.map(formatLastThrow).join(" ");
 	const total = lastTurn.reduce((sum, dart) => {
 		const multiplierValue = dart.multiplier === "triple" ? 3 : dart.multiplier === "double" ? 2 : 1;
 		return sum + dart.value * multiplierValue;
 	}, 0);
-	
+
 	return `${darts} (${total})`;
 }
 
