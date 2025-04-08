@@ -94,12 +94,23 @@ interface LegHistory {
 	turns: LegTurn[];
 }
 
+interface UserData {
+    user_id: string;
+    email: string;
+    nick_name?: string;
+    full_name?: string;
+    avatar: string;
+    display_name: string;
+}
+
 const route = useRoute();
 const { getGameByIdAsync } = useGamesStatusX01();
+const { getUsersDataAsync } = useUserData();
 
 const game = ref<any>(null);
 const gameData = ref<GameData>();
 const isLoading = ref(true);
+const usersData = ref<Map<string, UserData>>(new Map());
 
 definePageMeta({
 	middleware: "auth",
@@ -114,6 +125,15 @@ onMounted(async () => {
 			try {
 				const parsedData = JSON.parse(response.data.game_data) as GameData;
 				gameData.value = parsedData;
+
+				// Get all user IDs from the game
+				const userIds = new Set<string>();
+				parsedData.players?.forEach(player => {
+					if (player.user_id) userIds.add(player.user_id);
+				});
+
+				// Fetch all users' data
+				usersData.value = await getUsersDataAsync(Array.from(userIds));
 			} catch (e) {
 				console.error("Failed to parse game data:", e);
 			}
@@ -121,6 +141,24 @@ onMounted(async () => {
 	}
 	isLoading.value = false;
 });
+
+const getPlayerDisplayName = (playerName: string): string => {
+	if (!gameData.value) return playerName;
+	const player = gameData.value.players.find(p => p.name === playerName);
+	if (!player?.user_id) return playerName;
+	
+	const userData = usersData.value.get(player.user_id);
+	return userData?.display_name || playerName;
+};
+
+const getPlayerAvatar = (playerName: string): string | undefined => {
+	if (!gameData.value) return undefined;
+	const player = gameData.value.players.find(p => p.name === playerName);
+	if (!player?.user_id) return undefined;
+	
+	const userData = usersData.value.get(player.user_id);
+	return userData?.avatar;
+};
 
 const getFinalScore = (): string => {
 	if (!gameData.value || !gameData.value.players) return "-";
@@ -172,7 +210,6 @@ const getLegHistory = (): LegHistory[] => {
 
 	const history = gameData.value.history;
 	const legs: LegHistory[] = [];
-	let currentLeg: LegHistory | null = null;
 
 	// Group throws by leg and turn
 	const throwsByLegAndTurn = history.reduce((acc, throw_) => {
@@ -198,21 +235,12 @@ const getLegHistory = (): LegHistory[] => {
 
 	// Process each leg
 	Object.entries(throwsByLegAndTurn).forEach(([legIndex, legThrows]) => {
-		currentLeg = {
-			legIndex: Number(legIndex),
-			winner: "",
+		const legData: LegHistory = {
+			legIndex: parseInt(legIndex),
+			winner: '',
 			duration: 0,
-			players: gameData.value!.players.map((p) => ({
-				name: p.name,
-				score: gameData.value!.gameType,
-				darts: 0,
-				first9Score: 0,
-				first9Darts: 0,
-				highestScore: 0,
-				checkoutSuccess: false,
-				checkoutAttempts: 0,
-			})),
-			turns: [],
+			players: [],
+			turns: []
 		};
 
 		// Track scores for each player in this leg
@@ -226,7 +254,7 @@ const getLegHistory = (): LegHistory[] => {
 			.forEach(([turnIndex, turnThrows]) => {
 				const throw_ = turnThrows[0]; // Use first throw for player info
 				const playerIndex = throw_.playerIndex;
-				const player = currentLeg.players[playerIndex];
+				const player = gameData.value!.players[playerIndex];
 				const currentScore = playerScores.get(player.name)!;
 
 				// Calculate turn score
@@ -236,14 +264,25 @@ const getLegHistory = (): LegHistory[] => {
 				}, 0);
 
 				// Update player statistics
-				player.darts += turnThrows.length;
-				if (player.darts <= 9) {
-					player.first9Score += turnScore;
-					player.first9Darts += turnThrows.length;
+				const playerStats = legData.players[playerIndex] || {
+					name: player.name,
+					score: gameData.value!.gameType,
+					darts: 0,
+					first9Score: 0,
+					first9Darts: 0,
+					highestScore: 0,
+					checkoutSuccess: false,
+					checkoutAttempts: 0,
+				};
+				playerStats.darts += turnThrows.length;
+				if (playerStats.darts <= 9) {
+					playerStats.first9Score += turnScore;
+					playerStats.first9Darts += turnThrows.length;
 				}
-				if (turnScore > player.highestScore) {
-					player.highestScore = turnScore;
+				if (turnScore > playerStats.highestScore) {
+					playerStats.highestScore = turnScore;
 				}
+				legData.players[playerIndex] = playerStats;
 
 				// Create turn
 				const turn: LegTurn = {
@@ -276,30 +315,29 @@ const getLegHistory = (): LegHistory[] => {
 					if (newScore === 0) {
 						turn.isFinish = true;
 						turn.highlights.push("Finish");
-						currentLeg.winner = player.name;
-						player.checkoutSuccess = true;
+						legData.winner = player.name;
+						playerStats.checkoutSuccess = true;
 					}
 
 					// Track checkout attempts
 					if (currentScore <= 170) {
-						player.checkoutAttempts++;
+						playerStats.checkoutAttempts++;
 					}
 				}
 
 				// Update scores
 				turn.scoreLeft = newScore;
 				playerScores.set(player.name, newScore);
-				player.score = newScore;
 
 				// Calculate average
 				const totalScore = gameData.value!.gameType - newScore;
-				const totalDarts = player.darts;
+				const totalDarts = playerStats.darts;
 				turn.averageAfter = totalDarts > 0 ? (totalScore / (totalDarts / 3)) : 0;
 
-				currentLeg.turns.push(turn);
+				legData.turns.push(turn);
 			});
 
-		legs.push(currentLeg);
+		legs.push(legData);
 	});
 
 	return legs;
@@ -313,37 +351,48 @@ const getLegHistory = (): LegHistory[] => {
 			<p class="mt-4 text-gray-600">Loading game details...</p>
 		</div>
 
-		<div v-else-if="gameData">
+		<div v-else-if="gameData" class="max-w-5xl mx-auto">
 			<!-- Game Header -->
 			<div class="bg-white rounded-lg shadow-sm p-6 mb-6">
 				<div class="flex justify-between items-center mb-4">
 					<h1 class="text-2xl font-bold">Game Summary</h1>
-					<span class="text-gray-600">{{ formatDate(gameData.completedAt) }}</span>
+					<div class="text-sm text-gray-600">
+						{{ formatDate(gameData.completedAt) }}
+					</div>
 				</div>
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-					<div>
-						<h2 class="text-lg font-semibold mb-2">Match Result</h2>
-						<div class="flex items-center space-x-4">
-							<div v-for="(player, index) in gameData.players" :key="index" 
-								class="flex-1 p-4 bg-gray-50 rounded-lg text-center">
-								<div class="font-medium">{{ player.name }}</div>
-								<div class="text-2xl font-bold mt-1">{{ player.legsWon }}</div>
-								<div class="text-sm text-gray-600 mt-1">legs won</div>
+
+				<!-- Player Scores -->
+				<div class="mb-6">
+					<div class="flex items-center space-x-4">
+						<div v-for="(player, index) in gameData.players" :key="index" 
+							class="flex-1 p-4 bg-gray-50 rounded-lg"
+						>
+							<div class="flex items-center justify-center gap-3">
+								<img 
+									v-if="getPlayerAvatar(player.name)"
+									:src="getPlayerAvatar(player.name)"
+									:alt="`${getPlayerDisplayName(player.name)}'s avatar`"
+									class="w-10 h-10 rounded-full"
+								/>
+								<div class="text-center">
+									<div class="font-medium">{{ getPlayerDisplayName(player.name) }}</div>
+									<div class="text-2xl font-bold mt-1">{{ player.legsWon }}</div>
+									<div class="text-sm text-gray-600">legs won</div>
+								</div>
 							</div>
 						</div>
 					</div>
-					<div>
-						<h2 class="text-lg font-semibold mb-2">Game Details</h2>
-						<div class="grid grid-cols-2 gap-4">
-							<div class="p-3 bg-gray-50 rounded-lg">
-								<div class="text-sm text-gray-600">Game Type</div>
-								<div class="font-bold">{{ gameData.gameType }}</div>
-							</div>
-							<div class="p-3 bg-gray-50 rounded-lg">
-								<div class="text-sm text-gray-600">Total Legs</div>
-								<div class="font-bold">{{ gameData.numberOfLegs }}</div>
-							</div>
-						</div>
+				</div>
+
+				<!-- Game Details -->
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div class="p-3 bg-gray-50 rounded-lg">
+						<div class="text-sm text-gray-600">Game Type</div>
+						<div class="font-bold">{{ gameData.gameType }}</div>
+					</div>
+					<div class="p-3 bg-gray-50 rounded-lg">
+						<div class="text-sm text-gray-600">Total Legs</div>
+						<div class="font-bold">{{ gameData.numberOfLegs }}</div>
 					</div>
 				</div>
 			</div>
@@ -368,7 +417,7 @@ const getLegHistory = (): LegHistory[] => {
 						<tbody>
 							<tr v-for="(player, index) in gameData.players" :key="index" 
 								class="border-b border-gray-100">
-								<td class="py-2 px-4">{{ player.name }}</td>
+								<td class="py-2 px-4">{{ getPlayerDisplayName(player.name) }}</td>
 								<td class="py-2 px-4 text-right">{{ gameData.stats[index].average.toFixed(2) }}</td>
 								<td class="py-2 px-4 text-right">{{ gameData.stats[index].first9Average.toFixed(2) }}</td>
 								<td class="py-2 px-4 text-right">{{ gameData.stats[index].bestLeg || '-' }}</td>
@@ -387,14 +436,14 @@ const getLegHistory = (): LegHistory[] => {
 				<div class="flex justify-between items-center mb-4">
 					<h2 class="text-xl font-bold">Leg {{ leg.legIndex + 1 }}</h2>
 					<div class="text-sm text-gray-600">
-						Winner: <span class="font-medium">{{ leg.winner }}</span>
+						Winner: <span class="font-medium">{{ getPlayerDisplayName(leg.winner) }}</span>
 					</div>
 				</div>
 
 				<!-- Leg Statistics -->
 				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
 					<div v-for="player in leg.players" :key="player.name" class="p-4 bg-gray-50 rounded-lg">
-						<div class="font-medium mb-2">{{ player.name }}</div>
+						<div class="font-medium mb-2">{{ getPlayerDisplayName(player.name) }}</div>
 						<div class="grid grid-cols-2 gap-2 text-sm">
 							<div>
 								<div class="text-gray-600">Average</div>
@@ -432,7 +481,7 @@ const getLegHistory = (): LegHistory[] => {
 						<tbody>
 							<tr v-for="turn in leg.turns" :key="turn.turnIndex" 
 								:class="{'bg-green-50': turn.isFinish, 'bg-red-50': turn.isBust}">
-								<td class="py-2 px-4">{{ turn.playerName }}</td>
+								<td class="py-2 px-4">{{ getPlayerDisplayName(turn.playerName) }}</td>
 								<td class="py-2 px-4 text-right">{{ turn.scoreLeft }}</td>
 								<td class="py-2 px-4 text-center">
 									<div class="flex justify-center space-x-2">

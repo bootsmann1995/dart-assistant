@@ -147,7 +147,6 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useAuth } from '~/composables/useAuth.client';
 import { useFriends } from '~/composables/useFriends';
 
 interface Friend {

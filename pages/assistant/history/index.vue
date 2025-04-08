@@ -33,9 +33,29 @@
 				<NuxtLink :to="`/assistant/history/${game.id}`" class="block">
 					<div class="flex flex-col sm:flex-row sm:items-center gap-4">
 						<div class="flex-grow">
-							<h3 class="text-lg font-semibold mb-1">
-								{{ getGameTitle(game.game_data) }}
-							</h3>
+							<div class="flex items-center gap-3 mb-2">
+								<div class="flex -space-x-2">
+									<!-- Winner -->
+									<div v-if="getGamePlayers(game.game_data)?.winner.user_id" class="relative z-10">
+										<img 
+											:src="getPlayerData(getGamePlayers(game.game_data)?.winner.user_id)?.avatar"
+											:alt="getPlayerData(getGamePlayers(game.game_data)?.winner.user_id)?.display_name"
+											class="w-8 h-8 rounded-full border-2 border-white"
+										/>
+									</div>
+									<!-- Loser -->
+									<div v-if="getGamePlayers(game.game_data)?.loser.user_id" class="relative z-0">
+										<img 
+											:src="getPlayerData(getGamePlayers(game.game_data)?.loser.user_id)?.avatar"
+											:alt="getPlayerData(getGamePlayers(game.game_data)?.loser.user_id)?.display_name"
+											class="w-8 h-8 rounded-full border-2 border-white"
+										/>
+									</div>
+								</div>
+								<h3 class="text-lg font-semibold">
+									{{ getGameTitle(game.game_data) }}
+								</h3>
+							</div>
 							<div class="flex flex-wrap gap-x-4 gap-y-1 text-sm">
 								<p class="text-gray-600">
 									{{ formatDate(game.created_at) }}
@@ -81,12 +101,29 @@ interface GameX01 {
 	user_id: string;
 }
 
+interface GamePlayer {
+	name: string;
+	user_id?: string;
+	legsWon: number;
+}
+
+interface UserData {
+	user_id: string;
+	email: string;
+	nick_name?: string;
+	full_name?: string;
+	avatar: string;
+	display_name: string;
+}
+
 const { getUserAsync } = useAuth();
 const { getGamesBasedOnUserAsync } = useGamesStatusX01();
+const { getUsersDataAsync } = useUserData();
 
 const games = ref<GameX01[]>([]);
 const isLoading = ref(true);
 const currentUserId = ref<string | null>(null);
+const usersData = ref<Map<string, UserData>>(new Map());
 
 definePageMeta({
 	middleware: "auth",
@@ -99,6 +136,22 @@ onMounted(async () => {
 		const gamesResp = await getGamesBasedOnUserAsync(userResp.user.id);
 		if (gamesResp?.data) {
 			games.value = gamesResp.data;
+			
+			// Get all unique user IDs from games
+			const userIds = new Set<string>();
+			games.value.forEach(game => {
+				try {
+					const data = JSON.parse(game.game_data);
+					data.players?.forEach((player: { user_id?: string }) => {
+						if (player.user_id) userIds.add(player.user_id);
+					});
+				} catch (e) {
+					console.error('Failed to parse game data:', e);
+				}
+			});
+
+			// Fetch all users' data at once
+			usersData.value = await getUsersDataAsync(Array.from(userIds));
 		}
 	}
 	isLoading.value = false;
@@ -117,9 +170,16 @@ function formatDate(dateString: string) {
 function getGameTitle(gameData: string) {
 	try {
 		const data = JSON.parse(gameData);
-		const winner = data.winner || "Unknown";
-		const loser = data.players?.find((p: { name: string }) => p.name !== winner)?.name || "Unknown";
-		return `${winner} vs ${loser}`;
+		const players = getGamePlayers(gameData);
+		if (!players) return "Game Details";
+
+		const winnerData = getPlayerData(players.winner.user_id);
+		const loserData = getPlayerData(players.loser.user_id);
+
+		const winnerName = winnerData?.display_name || players.winner.name;
+		const loserName = loserData?.display_name || players.loser.name;
+
+		return `${winnerName} vs ${loserName}`;
 	} catch (e) {
 		return "Game Details";
 	}
@@ -156,6 +216,22 @@ function getPlayerAverage(gameData: string, userId: string) {
 			return data.stats[playerIndex]?.average || 0;
 		}
 		return null;
+	} catch (e) {
+		return null;
+	}
+}
+
+function getPlayerData(userId: string | undefined): UserData | null {
+	if (!userId) return null;
+	return usersData.value.get(userId) || null;
+}
+
+function getGamePlayers(gameData: string): { winner: GamePlayer, loser: GamePlayer } | null {
+	try {
+		const data = JSON.parse(gameData);
+		const winner = data.players?.find((p: GamePlayer) => p.name === data.winner);
+		const loser = data.players?.find((p: GamePlayer) => p.name !== data.winner);
+		return winner && loser ? { winner, loser } : null;
 	} catch (e) {
 		return null;
 	}

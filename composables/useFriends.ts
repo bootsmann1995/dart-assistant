@@ -1,4 +1,3 @@
-import { useAuth } from './useAuth.client';
 
 interface UserMetaData {
     email: string;

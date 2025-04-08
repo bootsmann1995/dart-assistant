@@ -24,6 +24,12 @@
 				>
 					Game History
 				</NuxtLink>
+				<NuxtLink
+					to="/assistant/friends"
+					class="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white text-center rounded-lg hover:bg-blue-700 shadow-sm"
+				>
+					Friends
+				</NuxtLink>
 			</div>
 
 			<!-- Overall Stats Card -->
@@ -169,7 +175,7 @@
 
 <script setup lang="ts">
 import { useDashboardStats } from "~/composables/useDashboardStats";
-import { useAuth } from "@/composables/useAuth.client";
+import { useUserData } from "~/composables/useUserData";
 
 definePageMeta({
 	middleware: "auth",
@@ -177,6 +183,7 @@ definePageMeta({
 
 const { calculateStats } = useDashboardStats();
 const { getUserAsync } = useAuth();
+const { getUserDataAsync } = useUserData();
 const stats = ref<any>(null);
 const userName = ref("");
 const isLoading = ref(true);
@@ -185,8 +192,13 @@ onMounted(async () => {
 	try {
 		stats.value = await calculateStats();
 		const userResp = await getUserAsync();
-		if (userResp?.user?.email) {
-			userName.value = userResp.user.email.split('@')[0];
+		if (userResp?.user?.id) {
+			const userData = await getUserDataAsync(userResp.user.id);
+			if (userData) {
+				userName.value = userData.nick_name || userData.full_name || userData.email;
+			} else if (userResp.user.email) {
+				userName.value = userResp.user.email.split('@')[0];
+			}
 		}
 	} finally {
 		isLoading.value = false;
