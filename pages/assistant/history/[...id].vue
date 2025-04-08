@@ -95,12 +95,12 @@ interface LegHistory {
 }
 
 interface UserData {
-    user_id: string;
-    email: string;
-    nick_name?: string;
-    full_name?: string;
-    avatar: string;
-    display_name: string;
+	user_id: string;
+	email: string;
+	nick_name?: string;
+	full_name?: string;
+	avatar: string;
+	display_name: string;
 }
 
 const route = useRoute();
@@ -123,12 +123,15 @@ onMounted(async () => {
 		if (response?.data) {
 			game.value = response.data;
 			try {
-				const parsedData = JSON.parse(response.data.game_data) as GameData;
+				const parsedData =
+					typeof response.data.game_data === "string"
+						? JSON.parse(response.data.game_data)
+						: response.data.game_data;
 				gameData.value = parsedData;
 
 				// Get all user IDs from the game
 				const userIds = new Set<string>();
-				parsedData.players?.forEach(player => {
+				parsedData.players?.forEach((player) => {
 					if (player.user_id) userIds.add(player.user_id);
 				});
 
@@ -144,18 +147,18 @@ onMounted(async () => {
 
 const getPlayerDisplayName = (playerName: string): string => {
 	if (!gameData.value) return playerName;
-	const player = gameData.value.players.find(p => p.name === playerName);
+	const player = gameData.value.players.find((p) => p.name === playerName);
 	if (!player?.user_id) return playerName;
-	
+
 	const userData = usersData.value.get(player.user_id);
 	return userData?.display_name || playerName;
 };
 
 const getPlayerAvatar = (playerName: string): string | undefined => {
 	if (!gameData.value) return undefined;
-	const player = gameData.value.players.find(p => p.name === playerName);
+	const player = gameData.value.players.find((p) => p.name === playerName);
 	if (!player?.user_id) return undefined;
-	
+
 	const userData = usersData.value.get(player.user_id);
 	return userData?.avatar;
 };
@@ -212,23 +215,26 @@ const getLegHistory = (): LegHistory[] => {
 	const legs: LegHistory[] = [];
 
 	// Group throws by leg and turn
-	const throwsByLegAndTurn = history.reduce((acc, throw_) => {
-		if (!acc[throw_.leg]) {
-			acc[throw_.leg] = {};
-		}
-		if (!acc[throw_.leg][throw_.turnIndex]) {
-			acc[throw_.leg][throw_.turnIndex] = [];
-		}
-		acc[throw_.leg][throw_.turnIndex].push(throw_);
-		return acc;
-	}, {} as Record<number, Record<number, GameThrow[]>>);
+	const throwsByLegAndTurn = history.reduce(
+		(acc, throw_) => {
+			if (!acc[throw_.leg]) {
+				acc[throw_.leg] = {};
+			}
+			if (!acc[throw_.leg][throw_.turnIndex]) {
+				acc[throw_.leg][throw_.turnIndex] = [];
+			}
+			acc[throw_.leg][throw_.turnIndex].push(throw_);
+			return acc;
+		},
+		{} as Record<number, Record<number, GameThrow[]>>
+	);
 
 	// Calculate score for a single dart throw
 	const calculateDartScore = (throw_: GameThrow): number => {
 		const multiplierValue = {
-			"single": 1,
-			"double": 2,
-			"triple": 3
+			single: 1,
+			double: 2,
+			triple: 3,
 		}[throw_.multiplier];
 		return throw_.value * multiplierValue;
 	};
@@ -237,16 +243,14 @@ const getLegHistory = (): LegHistory[] => {
 	Object.entries(throwsByLegAndTurn).forEach(([legIndex, legThrows]) => {
 		const legData: LegHistory = {
 			legIndex: parseInt(legIndex),
-			winner: '',
+			winner: "",
 			duration: 0,
 			players: [],
-			turns: []
+			turns: [],
 		};
 
 		// Track scores for each player in this leg
-		const playerScores = new Map(
-			gameData.value!.players.map(p => [p.name, gameData.value!.gameType])
-		);
+		const playerScores = new Map(gameData.value!.players.map((p) => [p.name, gameData.value!.gameType]));
 
 		// Process turns in order
 		Object.entries(legThrows)
@@ -289,7 +293,7 @@ const getLegHistory = (): LegHistory[] => {
 					turnIndex: Number(turnIndex),
 					playerName: player.name,
 					scoreLeft: currentScore,
-					darts: turnThrows.map(t => ({
+					darts: turnThrows.map((t) => ({
 						value: t.value,
 						multiplier: t.multiplier,
 					})),
@@ -299,7 +303,7 @@ const getLegHistory = (): LegHistory[] => {
 				};
 
 				// Handle bust and score update
-				const isBust = turnThrows.some(t => t.wasBust);
+				const isBust = turnThrows.some((t) => t.wasBust);
 				const newScore = isBust ? currentScore : currentScore - turnScore;
 
 				if (isBust) {
@@ -332,7 +336,7 @@ const getLegHistory = (): LegHistory[] => {
 				// Calculate average
 				const totalScore = gameData.value!.gameType - newScore;
 				const totalDarts = playerStats.darts;
-				turn.averageAfter = totalDarts > 0 ? (totalScore / (totalDarts / 3)) : 0;
+				turn.averageAfter = totalDarts > 0 ? totalScore / (totalDarts / 3) : 0;
 
 				legData.turns.push(turn);
 			});
@@ -364,11 +368,13 @@ const getLegHistory = (): LegHistory[] => {
 				<!-- Player Scores -->
 				<div class="mb-6">
 					<div class="flex items-center space-x-4">
-						<div v-for="(player, index) in gameData.players" :key="index" 
+						<div
+							v-for="(player, index) in gameData.players"
+							:key="index"
 							class="flex-1 p-4 bg-gray-50 rounded-lg"
 						>
 							<div class="flex items-center justify-center gap-3">
-								<img 
+								<img
 									v-if="getPlayerAvatar(player.name)"
 									:src="getPlayerAvatar(player.name)"
 									:alt="`${getPlayerDisplayName(player.name)}'s avatar`"
@@ -415,12 +421,17 @@ const getLegHistory = (): LegHistory[] => {
 							</tr>
 						</thead>
 						<tbody>
-							<tr v-for="(player, index) in gameData.players" :key="index" 
-								class="border-b border-gray-100">
+							<tr
+								v-for="(player, index) in gameData.players"
+								:key="index"
+								class="border-b border-gray-100"
+							>
 								<td class="py-2 px-4">{{ getPlayerDisplayName(player.name) }}</td>
 								<td class="py-2 px-4 text-right">{{ gameData.stats[index].average.toFixed(2) }}</td>
-								<td class="py-2 px-4 text-right">{{ gameData.stats[index].first9Average.toFixed(2) }}</td>
-								<td class="py-2 px-4 text-right">{{ gameData.stats[index].bestLeg || '-' }}</td>
+								<td class="py-2 px-4 text-right">
+									{{ gameData.stats[index].first9Average.toFixed(2) }}
+								</td>
+								<td class="py-2 px-4 text-right">{{ gameData.stats[index].bestLeg || "-" }}</td>
 								<td class="py-2 px-4 text-right">{{ getCheckoutPercentage(index) }}%</td>
 								<td class="py-2 px-4 text-right">{{ gameData.stats[index].oneEighties }}</td>
 								<td class="py-2 px-4 text-right">{{ gameData.stats[index].oneFortyPlus }}</td>
@@ -451,7 +462,9 @@ const getLegHistory = (): LegHistory[] => {
 							</div>
 							<div>
 								<div class="text-gray-600">First 9</div>
-								<div class="font-bold">{{ (player.first9Score / (player.first9Darts / 3)).toFixed(2) }}</div>
+								<div class="font-bold">
+									{{ (player.first9Score / (player.first9Darts / 3)).toFixed(2) }}
+								</div>
 							</div>
 							<div>
 								<div class="text-gray-600">Highest Score</div>
@@ -459,7 +472,16 @@ const getLegHistory = (): LegHistory[] => {
 							</div>
 							<div>
 								<div class="text-gray-600">Checkout</div>
-								<div class="font-bold">{{ player.checkoutAttempts ? ((player.checkoutSuccess ? 1 : 0) / player.checkoutAttempts * 100).toFixed(0) : 0 }}%</div>
+								<div class="font-bold">
+									{{
+										player.checkoutAttempts
+											? (
+													((player.checkoutSuccess ? 1 : 0) / player.checkoutAttempts) *
+													100
+												).toFixed(0)
+											: 0
+									}}%
+								</div>
 							</div>
 						</div>
 					</div>
@@ -479,8 +501,11 @@ const getLegHistory = (): LegHistory[] => {
 							</tr>
 						</thead>
 						<tbody>
-							<tr v-for="turn in leg.turns" :key="turn.turnIndex" 
-								:class="{'bg-green-50': turn.isFinish, 'bg-red-50': turn.isBust}">
+							<tr
+								v-for="turn in leg.turns"
+								:key="turn.turnIndex"
+								:class="{ 'bg-green-50': turn.isFinish, 'bg-red-50': turn.isBust }"
+							>
 								<td class="py-2 px-4">{{ getPlayerDisplayName(turn.playerName) }}</td>
 								<td class="py-2 px-4 text-right">{{ turn.scoreLeft }}</td>
 								<td class="py-2 px-4 text-center">
@@ -497,8 +522,11 @@ const getLegHistory = (): LegHistory[] => {
 								<td class="py-2 px-4 text-right">{{ turn.averageAfter.toFixed(2) }}</td>
 								<td class="py-2 px-4">
 									<div class="flex flex-wrap gap-2">
-										<span v-for="highlight in turn.highlights" :key="highlight"
-											:class="['px-2 py-1 rounded-full text-xs', getHighlightClass(highlight)]">
+										<span
+											v-for="highlight in turn.highlights"
+											:key="highlight"
+											:class="['px-2 py-1 rounded-full text-xs', getHighlightClass(highlight)]"
+										>
 											{{ highlight }}
 										</span>
 									</div>

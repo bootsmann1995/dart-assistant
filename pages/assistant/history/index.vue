@@ -37,17 +37,23 @@
 								<div class="flex -space-x-2">
 									<!-- Winner -->
 									<div v-if="getGamePlayers(game.game_data)?.winner.user_id" class="relative z-10">
-										<img 
+										<img
 											:src="getPlayerData(getGamePlayers(game.game_data)?.winner.user_id)?.avatar"
-											:alt="getPlayerData(getGamePlayers(game.game_data)?.winner.user_id)?.display_name"
+											:alt="
+												getPlayerData(getGamePlayers(game.game_data)?.winner.user_id)
+													?.display_name
+											"
 											class="w-8 h-8 rounded-full border-2 border-white"
 										/>
 									</div>
 									<!-- Loser -->
 									<div v-if="getGamePlayers(game.game_data)?.loser.user_id" class="relative z-0">
-										<img 
+										<img
 											:src="getPlayerData(getGamePlayers(game.game_data)?.loser.user_id)?.avatar"
-											:alt="getPlayerData(getGamePlayers(game.game_data)?.loser.user_id)?.display_name"
+											:alt="
+												getPlayerData(getGamePlayers(game.game_data)?.loser.user_id)
+													?.display_name
+											"
 											class="w-8 h-8 rounded-full border-2 border-white"
 										/>
 									</div>
@@ -136,17 +142,17 @@ onMounted(async () => {
 		const gamesResp = await getGamesBasedOnUserAsync(userResp.user.id);
 		if (gamesResp?.data) {
 			games.value = gamesResp.data;
-			
+
 			// Get all unique user IDs from games
 			const userIds = new Set<string>();
-			games.value.forEach(game => {
+			games.value.forEach((game) => {
 				try {
-					const data = JSON.parse(game.game_data);
+					const data = typeof game.game_data === "string" ? JSON.parse(game.game_data) : game.game_data;
 					data.players?.forEach((player: { user_id?: string }) => {
 						if (player.user_id) userIds.add(player.user_id);
 					});
 				} catch (e) {
-					console.error('Failed to parse game data:', e);
+					console.error("Failed to parse game data:", e);
 				}
 			});
 
@@ -169,7 +175,6 @@ function formatDate(dateString: string) {
 
 function getGameTitle(gameData: string) {
 	try {
-		const data = JSON.parse(gameData);
 		const players = getGamePlayers(gameData);
 		if (!players) return "Game Details";
 
@@ -187,7 +192,7 @@ function getGameTitle(gameData: string) {
 
 function getGameScore(gameData: string) {
 	try {
-		const data = JSON.parse(gameData);
+		const data = typeof gameData === "string" ? JSON.parse(gameData) : gameData;
 		const winnerLegs =
 			data.players?.find((p: { name: string; legsWon: number }) => p.name === data.winner)?.legsWon || 0;
 		const loserLegs =
@@ -200,7 +205,7 @@ function getGameScore(gameData: string) {
 
 function getGameType(gameData: string) {
 	try {
-		const data = JSON.parse(gameData);
+		const data = typeof gameData === "string" ? JSON.parse(gameData) : gameData;
 		return `${data.gameType || 501} - Best of ${data.numberOfLegs || 3}`;
 	} catch (e) {
 		return "501";
@@ -209,7 +214,7 @@ function getGameType(gameData: string) {
 
 function getPlayerAverage(gameData: string, userId: string) {
 	try {
-		const data = JSON.parse(gameData);
+		const data = typeof gameData === "string" ? JSON.parse(gameData) : gameData;
 		const player = data.players?.find((p: any) => p.user_id === userId);
 		if (player) {
 			const playerIndex = data.players.indexOf(player);
@@ -226,9 +231,9 @@ function getPlayerData(userId: string | undefined): UserData | null {
 	return usersData.value.get(userId) || null;
 }
 
-function getGamePlayers(gameData: string): { winner: GamePlayer, loser: GamePlayer } | null {
+function getGamePlayers(gameData: string): { winner: GamePlayer; loser: GamePlayer } | null {
 	try {
-		const data = JSON.parse(gameData);
+		const data = typeof gameData === "string" ? JSON.parse(gameData) : gameData;
 		const winner = data.players?.find((p: GamePlayer) => p.name === data.winner);
 		const loser = data.players?.find((p: GamePlayer) => p.name !== data.winner);
 		return winner && loser ? { winner, loser } : null;

@@ -12,8 +12,39 @@
 			<div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
 			<p class="mt-4 text-gray-600">Loading your statistics...</p>
 		</div>
+		<div v-if="gameInvites.length > 0" class="bg-white rounded-lg shadow p-4 md:p-6">
+			<h2 class="text-lg md:text-xl font-semibold mb-4">Game Invites</h2>
+			<div class="space-y-3">
+				<div
+					v-for="invite in gameInvites"
+					:key="invite.id"
+					class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+				>
+					<div>
+						<div class="font-medium">{{ invite.sender.nick_name ?? invite.sender.email }}</div>
+						<div class="text-sm text-gray-600">wants to play X01</div>
+					</div>
+					<div class="flex gap-2">
+						<button
+							@click="handleInvite(invite.id, 'accepted')"
+							class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+						>
+							Accept
+						</button>
+						<button
+							@click="handleInvite(invite.id, 'declined')"
+							class="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+						>
+							Decline
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
 
 		<div v-else-if="stats" class="grid grid-cols-1 gap-4 md:gap-6">
+			<!-- Game Invites Section -->
+
 			<!-- Action Buttons -->
 			<div class="flex flex-col sm:flex-row gap-4">
 				<NuxtLink
@@ -101,37 +132,6 @@
 				</div>
 			</div>
 
-			<!-- Game Invites Section -->
-			<div v-if="gameInvites.length > 0" class="bg-white rounded-lg shadow p-4 md:p-6">
-				<h2 class="text-lg md:text-xl font-semibold mb-4">Game Invites</h2>
-				<div class="space-y-4">
-					<div
-						v-for="invite in gameInvites"
-						:key="invite.id"
-						class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-					>
-						<div>
-							<span class="font-medium">{{ invite.sender.nick_name || invite.sender.email }}</span>
-							<span class="text-sm text-gray-600"> invited you to play X01</span>
-						</div>
-						<div class="flex gap-2">
-							<button
-								@click="handleInvite(invite.id, 'accepted')"
-								class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
-							>
-								Accept
-							</button>
-							<button
-								@click="handleInvite(invite.id, 'declined')"
-								class="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
-							>
-								Decline
-							</button>
-						</div>
-					</div>
-				</div>
-			</div>
-
 			<!-- Quick Tips Section -->
 			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 				<!-- Strengths Card -->
@@ -211,11 +211,11 @@
 <script setup lang="ts">
 interface GameInvite {
 	id: string;
-	sender: {
-		nick_name?: string;
-		email: string;
-	};
-	status: string;
+	sender: string;
+	senderName: string;
+	type: "x01Invite";
+	sending_to: string;
+	status: "pending" | "accepted" | "declined" | "expired";
 	created_at: string;
 }
 
@@ -223,43 +223,56 @@ definePageMeta({
 	middleware: "auth",
 });
 
-const { calculateStats } = useDashboardStats();
-const { getUserAsync } = useAuth();
-const { getUserDataAsync } = useUserData();
-const { isAuthenticatedAsync } = useAuth();
+const { getClient } = useAuth();
 const { getGameInvitesAsync, updateGameInviteStatusAsync } = useGamesStatusX01();
+const { calculateStats } = useDashboardStats();
 
-const stats = ref<any>(null);
-const userName = ref("");
-const isLoading = ref(true);
 const isAuthenticated = ref(false);
+const isLoading = ref(true);
+const stats = ref<any>(null);
 const gameInvites = ref<GameInvite[]>([]);
 
-onMounted(async () => {
-	isAuthenticated.value = await isAuthenticatedAsync();
-	try {
-		stats.value = await calculateStats();
-		const userResp = await getUserAsync();
-		const userData = await getUserDataAsync(userResp?.user?.id);
-		if (userData) {
-			userName.value = userData.nick_name || userResp?.user?.email || "";
-		}
-		// Fetch game invites
-		gameInvites.value = await getGameInvitesAsync();
-	} catch (error) {
-		console.error("Error loading dashboard:", error);
-	} finally {
-		isLoading.value = false;
-	}
-});
+// Function to fetch game invites
+const fetchGameInvites = async () => {
+	const invites = await getGameInvitesAsync();
+	gameInvites.value = invites || [];
+};
 
-async function handleInvite(inviteId: string, action: "accepted" | "declined") {
+// Handle invite response
+const handleInvite = async (inviteId: string, action: "accepted" | "declined") => {
 	try {
 		await updateGameInviteStatusAsync(inviteId, action);
+
 		// Remove the invite from the list
-		gameInvites.value = gameInvites.value.filter((invite) => invite.id !== inviteId);
+		gameInvites.value = gameInvites.value.filter((i) => i.id !== inviteId);
 	} catch (error) {
-		console.error("Error handling invite:", error);
+		console.error("Failed to handle invite:", error);
 	}
-}
+};
+
+onMounted(async () => {
+	const {
+		data: { user },
+	} = await getClient().auth.getUser();
+	isAuthenticated.value = !!user;
+
+	if (isAuthenticated.value) {
+		try {
+			stats.value = await calculateStats();
+
+			// Initial fetch of game invites
+			await fetchGameInvites();
+
+			// Setup polling every 5 seconds
+		} catch (error) {
+			console.error("Failed to fetch dashboard data:", error);
+		}
+	}
+
+	isLoading.value = false;
+});
+
+const userName = computed(() => {
+	return stats.value?.userName || null;
+});
 </script>

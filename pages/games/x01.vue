@@ -1,327 +1,33 @@
-<template>
-	<div class="container mx-auto p-4 pb-20">
-		<!-- Navigation -->
-		<div class="flex items-center justify-between mb-6">
-			<div class="flex items-center gap-2">
-				<NuxtLink to="/games" class="text-blue-600 hover:text-blue-800 flex items-center gap-1">
-					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-					</svg>
-					Back to Games
-				</NuxtLink>
-			</div>
-			<NuxtLink to="/assistant/dashboard" class="text-blue-600 hover:text-blue-800 flex items-center gap-1">
-				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-					/>
-				</svg>
-				Dashboard
-			</NuxtLink>
-		</div>
-
-		<!-- Game Setup -->
-		<div v-if="!gameStarted" class="space-y-6 max-w-md mx-auto">
-			<div class="flex items-center justify-between mb-4">
-				<h1 class="text-2xl md:text-3xl font-bold">X01 Game</h1>
-			</div>
-
-			<div class="bg-white p-4 md:p-6 rounded-lg shadow space-y-6">
-				<!-- Game Type Selection -->
-				<div class="space-y-2">
-					<label class="block font-medium text-gray-700">Game Type</label>
-					<div class="grid grid-cols-2 gap-2">
-						<button
-							v-for="type in [301, 501]"
-							:key="type"
-							@click="gameType = type"
-							:class="[
-								'py-3 px-4 rounded-lg text-center font-medium transition-colors',
-								gameType === type
-									? 'bg-blue-600 text-white'
-									: 'bg-gray-100 text-gray-700 hover:bg-gray-200',
-							]"
-						>
-							{{ type }}
-						</button>
-					</div>
-				</div>
-
-				<!-- Number of Legs -->
-				<div class="space-y-2">
-					<label class="block font-medium text-gray-700">Best of Legs</label>
-					<div class="grid grid-cols-3 gap-2">
-						<button
-							v-for="legs in [1, 3, 5, 7, 9, 11, 13, 15]"
-							:key="legs"
-							@click="numberOfLegs = legs"
-							:class="[
-								'py-3 px-4 rounded-lg text-center font-medium transition-colors',
-								numberOfLegs === legs
-									? 'bg-blue-600 text-white'
-									: 'bg-gray-100 text-gray-700 hover:bg-gray-200',
-							]"
-						>
-							{{ legs }}
-						</button>
-					</div>
-				</div>
-
-				<!-- Player Selection -->
-				<div class="space-y-3">
-					<label class="block font-medium text-gray-700">Players</label>
-					<div class="space-y-3">
-						<div
-							v-for="(player, index) in selectedPlayers"
-							:key="player.id"
-							class="bg-gray-50 p-3 rounded-lg space-y-2"
-						>
-							<div class="flex items-center justify-between">
-								<div class="flex items-center gap-2">
-									<img
-										v-if="player.avatar"
-										:src="player.avatar"
-										:alt="`${player.name}'s avatar`"
-										class="w-8 h-8 rounded-full object-cover"
-									/>
-									<span class="font-medium">Player {{ index + 1 }}</span>
-								</div>
-								<button
-									v-if="index > 0 && !player.user_id"
-									@click="removePlayer(index)"
-									class="text-red-600 hover:text-red-800"
-								>
-									<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M6 18L18 6M6 6l12 12"
-										></path>
-									</svg>
-								</button>
-							</div>
-							<div class="flex flex-col gap-2">
-								<input
-									type="text"
-									v-model="player.name"
-									class="w-full p-3 border rounded-lg"
-									:placeholder="index === 0 ? 'Player name' : 'Guest player name'"
-								/>
-								<button
-									v-if="user && !isUserInGame"
-									@click="useCurrentUser(index)"
-									class="w-full py-2 px-3 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-								>
-									Use My Account
-								</button>
-							</div>
-						</div>
-					</div>
-					<button
-						@click="addPlayer"
-						class="w-full py-3 px-4 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
-						:disabled="selectedPlayers.length >= 4"
-					>
-						Add Player
-					</button>
-				</div>
-
-				<!-- Start Game Button -->
-				<button
-					@click="startGame"
-					class="w-full py-4 bg-green-600 text-white rounded-lg font-medium text-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-700 transition-colors"
-					:disabled="!isValidGameSetup"
-				>
-					Start Game
-				</button>
-			</div>
-		</div>
-
-		<!-- Game Board -->
-		<div v-else class="pb-20">
-			<!-- Game Header -->
-			<div class="flex items-center justify-between mb-4">
-				<div>
-					<h1 class="text-xl md:text-2xl font-bold">X01 Game</h1>
-					<p class="text-sm text-gray-600">Leg {{ currentLeg }} of {{ numberOfLegs }}</p>
-				</div>
-				<button @click="confirmCancelGame" class="p-2 text-red-600 hover:text-red-800">
-					<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M6 18L18 6M6 6l12 12"
-						></path>
-					</svg>
-				</button>
-			</div>
-
-			<!-- Player Scorecards List -->
-			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-				<div
-					v-for="(player, index) in selectedPlayers"
-					:key="index"
-					:class="[
-						'bg-white border p-4 rounded-lg',
-						currentPlayerIndex === index ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-200',
-					]"
-				>
-					<div class="flex items-center gap-2 mb-2">
-						<img
-							v-if="player.avatar"
-							:src="player.avatar"
-							:alt="`${player.name}'s avatar`"
-							class="w-8 h-8 rounded-full object-cover"
-						/>
-						<div class="flex-1">
-							<div class="flex items-center justify-between">
-								<span class="font-medium">{{ player.name }}</span>
-								<span class="text-lg font-bold">{{ player.score }}</span>
-							</div>
-							<div class="flex items-center justify-between text-sm text-gray-600">
-								<span>Legs won: {{ player.legsWon }}</span>
-								<span>Checkout: {{ getCheckoutPercentage(index) }}</span>
-							</div>
-						</div>
-					</div>
-					<div class="text-sm text-gray-600">Last throw: {{ formatLastTurn(index) }}</div>
-				</div>
-			</div>
-
-			<!-- Score Calculator and Game Controls -->
-			<div v-if="!isGameFinished" class="bg-white border border-gray-200 rounded-lg p-3">
-				<div class="mb-3">
-					<h3 class="flex items-center gap-2 text-base font-bold mb-1">
-						<img
-							v-if="selectedPlayers[currentPlayerIndex].avatar"
-							:src="selectedPlayers[currentPlayerIndex].avatar"
-							:alt="`${selectedPlayers[currentPlayerIndex].name}'s avatar`"
-							class="w-8 h-8 rounded-full object-cover"
-						/>
-						{{ selectedPlayers[currentPlayerIndex].name }}
-						<span class="text-gray-600">({{ selectedPlayers[currentPlayerIndex].score }})</span>
-					</h3>
-
-					<!-- Current Throw Display -->
-					<div class="bg-gray-50 p-2 rounded-lg mb-2">
-						<div class="grid grid-cols-3 gap-2 text-center">
-							<div v-for="(dart, i) in currentTurnDarts" :key="i" class="text-base font-medium">
-								{{ formatDart(dart) }}
-							</div>
-						</div>
-						<button
-							v-if="gameHistory.length > 0"
-							@click="undoLastThrow"
-							class="w-full mt-1 py-1 px-2 text-xs text-red-600 hover:text-red-800 font-medium flex items-center justify-center gap-1"
-						>
-							<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M3 10h10a4 4 0 0 1 4 4v2M3 10l6 6m-6-6l6-6"
-								/>
-							</svg>
-							Undo
-						</button>
-					</div>
-
-					<!-- Turn Total -->
-					<div class="text-center mb-2">
-						<div class="text-base font-bold text-blue-600">Total: {{ calculateTurnTotal() }}</div>
-						<div v-if="getCheckoutSuggestion(getCurrentPlayer.score)" class="text-xs text-gray-600 mt-1">
-							{{ getCheckoutSuggestion(getCurrentPlayer.score)?.join(" - ") }}
-						</div>
-					</div>
-
-					<!-- Multiplier Buttons -->
-					<div class="grid grid-cols-3 gap-1 mb-2">
-						<button
-							v-for="multiplier in multipliers"
-							:key="multiplier"
-							@click="setMultiplier(multiplier)"
-							:class="[
-								'py-1 px-2 rounded text-sm font-medium transition-colors',
-								currentMultiplier === multiplier
-									? 'bg-blue-600 text-white'
-									: 'bg-gray-100 text-gray-700 hover:bg-gray-200',
-							]"
-						>
-							{{ multiplier === "single" ? "S" : multiplier === "double" ? "D" : "T" }}
-						</button>
-					</div>
-
-					<!-- Number Pad -->
-					<div class="grid grid-cols-3 gap-1">
-						<button
-							v-for="n in 20"
-							:key="n"
-							@click="addScore(n)"
-							class="py-2 bg-white border border-gray-200 rounded text-base font-medium hover:bg-gray-50 transition-colors active:bg-gray-100"
-						>
-							{{ n }}
-						</button>
-						<button
-							@click="addScore(25)"
-							class="py-2 bg-white border border-gray-200 rounded text-base font-medium hover:bg-gray-50 transition-colors active:bg-gray-100"
-						>
-							B
-						</button>
-						<button
-							@click="addScore(0)"
-							class="py-2 bg-white border border-gray-200 rounded text-base font-medium hover:bg-gray-50 transition-colors active:bg-gray-100"
-						>
-							0
-						</button>
-					</div>
-				</div>
-			</div>
-			<!-- Winner Display -->
-			<div
-				v-if="isGameFinished && winner"
-				class="mb-4 bg-green-50 border border-green-200 p-4 rounded-lg text-center"
-			>
-				<div class="text-2xl font-bold text-green-700 flex items-center justify-center gap-2">
-					<span class="text-3xl">🏆</span>
-					{{ winner.name }} wins!
-				</div>
-				<div class="flex gap-2 justify-center mt-4">
-					<button
-						v-if="!gameSaved"
-						@click="saveGame"
-						class="py-2 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-					>
-						Save Game
-					</button>
-					<button
-						@click="confirmCancelGame"
-						class="py-2 px-4 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
-					>
-						New Game
-					</button>
-				</div>
-			</div>
-		</div>
-	</div>
-</template>
-
 <script setup lang="ts">
-definePageMeta({
-	middleware: "auth",
-});
+import type { Friend } from "~/types/friend";
 
-const { getUserAsync } = useAuth();
+interface ExtendedFriend extends Friend {
+	id: string;
+	display_name: string;
+	name?: string;
+	nick_name?: string;
+	avatar?: string;
+}
+
+interface GameInvite {
+	id: string;
+	type: string;
+	sender: string;
+	sending_to: string;
+	status: "pending" | "accepted" | "declined" | "expired";
+	created_at: string;
+}
+
+const { getUserAsync, getClient } = useAuth();
+const { sendGameInviteAsync, getGameInvitesAsync, getInviteStatusAsync } = useGamesStatusX01();
+
 const user = ref();
 
 onMounted(async () => {
 	const resp = await getUserAsync();
 	if (resp?.user) {
 		user.value = { ...resp.user, metadata: resp.metadata };
+		useCurrentUser(0);
 	}
 });
 
@@ -362,29 +68,13 @@ interface GameState {
 	};
 	winner: string | null;
 	completedAt: string;
+	invited_users: string[];
 }
 
 const gameType = ref(501);
 const numberOfLegs = ref(3); // Default to best of 3
 const currentLeg = ref(1);
-const selectedPlayers = ref<PlayerState[]>([
-	{
-		name: "",
-		score: gameType.value,
-		legsWon: 0,
-		id: 0,
-		user_id: undefined,
-		avatar: undefined,
-	},
-	{
-		name: "",
-		score: gameType.value,
-		legsWon: 0,
-		id: 1,
-		user_id: undefined,
-		avatar: undefined,
-	},
-]);
+const selectedPlayers = ref<PlayerState[]>([]);
 const gameStarted = ref(false);
 const currentPlayerIndex = ref(0);
 const gameHistory = ref<DartThrow[]>([]);
@@ -399,10 +89,18 @@ const currentTurnIndex = ref(0);
 const legStarters = ref<number[]>([0]); // Start with player 0 for first leg
 
 const isValidGameSetup = computed(() => {
+	// Debug player names
+	console.log("Player names:", selectedPlayers.value.map(p => p.name));
+	console.log("All players have names:", selectedPlayers.value.every((player) => player.name.trim()));
+	console.log("Number of legs > 0:", numberOfLegs.value > 0);
+	console.log("At least one player:", selectedPlayers.value.length >= 1);
+	console.log("No pending invites:", pendingInvites.value.size === 0);
+	
 	return (
 		selectedPlayers.value.every((player) => player.name.trim()) &&
 		numberOfLegs.value > 0 &&
-		selectedPlayers.value.length >= 1
+		selectedPlayers.value.length >= 1 &&
+		pendingInvites.value.size === 0
 	);
 });
 
@@ -452,7 +150,10 @@ function getPlayerStats(playerId: number): PlayerStats {
 		.reduce(
 			(
 				legs: Array<{
-					turns: DartThrow[];
+					turns: Array<{
+						darts: DartThrow[];
+						total: number;
+					}>;
 				}>,
 				throw_
 			) => {
@@ -963,6 +664,7 @@ function isLastThrowInLeg(index: number): boolean {
 }
 
 function prepareGameState(): GameState {
+	const invitedUsers = Array.from(pendingInvites.value.keys());
 	const winner = getWinner();
 	if (!winner) {
 		throw new Error("Cannot prepare game state: no winner found");
@@ -982,6 +684,7 @@ function prepareGameState(): GameState {
 		stats: Object.fromEntries(selectedPlayers.value.map((_, index) => [index, getPlayerStats(index)])),
 		winner: winner.name,
 		completedAt: new Date().toISOString(),
+		invited_users: invitedUsers,
 	};
 }
 
@@ -1011,10 +714,29 @@ async function checkLegWinner() {
 
 function useCurrentUser(playerIndex: number) {
 	if (user.value?.email) {
-		const displayName = user.value.metadata?.nick_name || user.value.email;
-		selectedPlayers.value[playerIndex].name = displayName;
-		selectedPlayers.value[playerIndex].user_id = user.value.metadata?.user_id;
-		selectedPlayers.value[playerIndex].avatar = user.value.metadata?.avatar;
+		const displayName = user.value.metadata?.nick_name || user.value.metadata?.full_name || user.value.email;
+		
+		// If playerIndex is out of bounds, create a new player
+		if (playerIndex >= selectedPlayers.value.length) {
+			selectedPlayers.value.push({
+				name: displayName,
+				score: gameType.value,
+				legsWon: 0,
+				id: selectedPlayers.value.length,
+				user_id: user.value.metadata?.user_id,
+				avatar: user.value.metadata?.avatar,
+			});
+		} else {
+			// Update existing player
+			selectedPlayers.value[playerIndex].name = displayName;
+			selectedPlayers.value[playerIndex].user_id = user.value.metadata?.user_id;
+			selectedPlayers.value[playerIndex].avatar = user.value.metadata?.avatar;
+		}
+		
+		// Make sure the player name is not empty (this could cause isValidGameSetup to fail)
+		if (!selectedPlayers.value[playerIndex].name.trim()) {
+			selectedPlayers.value[playerIndex].name = "Player " + (playerIndex + 1);
+		}
 	}
 }
 
@@ -1342,4 +1064,598 @@ function getCheckoutPercentage(playerIndex: number): string {
 	const stats = getPlayerStats(playerIndex);
 	return stats.checkoutPercentage.toFixed(1);
 }
+
+const showInviteFriends = ref(false);
+const friends = ref<ExtendedFriend[]>([]);
+const pendingInvites = ref<Map<string, { status: string; requestId?: string; timer?: NodeJS.Timeout }>>(new Map());
+
+// Fetch friends when showing invite dialog
+watch(showInviteFriends, async (show) => {
+	if (show && user.value?.metadata?.user_id) {
+		const { getFriendsAsync } = useFriends();
+		const result = await getFriendsAsync(user.value.metadata.user_id);
+		if (result.data) {
+			friends.value = result.data.map((f) => ({
+				...f.friend,
+				display_name: f.friend.nick_name || f.friend.name || f.friend.email,
+			}));
+		}
+	}
+});
+
+// Function to check status of all pending invites
+const checkPendingInvites = async () => {
+	const pendingRequestIds = Array.from(pendingInvites.value.entries())
+		.filter(([_, data]) => data.requestId && data.status === "Pending...")
+		.map(([_, data]) => data.requestId as string);
+	
+	if (pendingRequestIds.length === 0) return;
+	
+	try {
+		// Check status for all pending invites
+		for (const requestId of pendingRequestIds) {
+			const status = await getInviteStatusAsync(requestId);
+			console.log(`Invite status for ${requestId}: ${status}`);
+			
+			const friendEntry = Array.from(pendingInvites.value.entries())
+				.find(([_, data]) => data.requestId === requestId);
+				
+			if (!friendEntry) continue;
+			const [friendId, inviteData] = friendEntry;
+			
+			if (status === "accepted") {
+				// Clear any timer
+				if (inviteData.timer) {
+					clearInterval(inviteData.timer);
+				}
+				
+				// Find the friend data
+				const friend = friends.value.find(f => f.id === friendId);
+				console.log("Friend accepted invite:", friend);
+				
+				if (friend) {
+					// Show notification that player accepted
+					const notification = document.createElement('div');
+					notification.className = 'fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded z-50';
+					notification.innerHTML = `<strong>${friend.display_name || friend.nick_name || friend.email}</strong> accepted your invitation!`;
+					document.body.appendChild(notification);
+					
+					// Remove notification after 3 seconds
+					setTimeout(() => {
+						notification.remove();
+					}, 3000);
+					
+					// Create a new player object
+					const newPlayer = {
+						id: selectedPlayers.value.length,
+						name: friend.nick_name || friend.name || friend.email || "",
+						score: gameType.value,
+						legsWon: 0,
+						user_id: friend.id,
+						avatar: friend.avatar,
+					};
+					
+					console.log("Adding new player to game:", newPlayer);
+					
+					// Add friend to players using Vue's reactivity API to ensure UI updates
+					selectedPlayers.value = [...selectedPlayers.value, newPlayer];
+					
+					console.log("Updated players array:", selectedPlayers.value);
+				}
+				
+				pendingInvites.value.delete(friendId);
+				
+				// If all invites are processed, hide the invite panel
+				if (pendingInvites.value.size === 0) {
+					showInviteFriends.value = false;
+				}
+			} else if (status === "declined" || status === "expired") {
+				// Clear any timer
+				if (inviteData.timer) {
+					clearInterval(inviteData.timer);
+				}
+				
+				pendingInvites.value.set(friendId, { 
+					status: status.charAt(0).toUpperCase() + status.slice(1),
+					requestId: inviteData.requestId
+				});
+				
+				// Remove status after 2 seconds
+				setTimeout(() => {
+					pendingInvites.value.delete(friendId);
+				}, 2000);
+			}
+		}
+	} catch (error) {
+		console.error("Failed to check invite statuses:", error);
+	}
+};
+
+// Function to invite a friend
+const inviteFriend = async (friend: ExtendedFriend) => {
+	if (!user.value?.metadata?.user_id) return;
+
+	try {
+		const result = await sendGameInviteAsync(friend.id);
+		if (result.error) throw result.error;
+
+		// Get the request ID from the response
+		console.log("Game invite response:", result);
+		const requestId = result.data?.[0]?.id;
+		
+		// If we can't get the ID directly, try to use the friend ID as a reference
+		if (!requestId) {
+			console.log("No request ID found in response, using friend ID as reference");
+			pendingInvites.value.set(friend.id, { 
+				status: "Pending...",
+			});
+		} else {
+			// Set initial status with request ID
+			pendingInvites.value.set(friend.id, { 
+				status: "Pending...",
+				requestId,
+			});
+		}
+
+		// Set timeout for 2 minutes
+		const expirationTimer = setTimeout(() => {
+			if (pendingInvites.value.has(friend.id)) {
+				pendingInvites.value.set(friend.id, { 
+					status: "Expired",
+					requestId: pendingInvites.value.get(friend.id)?.requestId,
+				});
+				// Remove status after 2 seconds
+				setTimeout(() => {
+					pendingInvites.value.delete(friend.id);
+				}, 2000);
+			}
+		}, 120000); // 2 minutes
+
+		// Store the timer reference
+		const currentInvite = pendingInvites.value.get(friend.id);
+		pendingInvites.value.set(friend.id, {
+			status: "Pending...",
+			requestId: currentInvite?.requestId,
+			timer: expirationTimer
+		});
+
+		// If we have a request ID, check status immediately and then every 5 seconds
+		if (requestId) {
+			await checkPendingInvites();
+			const statusTimer = setInterval(checkPendingInvites, 5000);
+			
+			// Update the timer reference
+			pendingInvites.value.set(friend.id, {
+				status: "Pending...",
+				requestId,
+				timer: statusTimer
+			});
+		} else {
+			// If we don't have a request ID, use the old polling method
+			const pollTimer = setInterval(async () => {
+				const invites = await getGameInvitesAsync();
+				if (!invites?.data) return;
+
+				// Find the invite by sender and recipient
+				const invite = invites.data.find(
+					(i: GameInvite) => i.sender === user.value?.metadata?.user_id && i.sending_to === friend.id
+				);
+
+				if (!invite) {
+					clearInterval(pollTimer);
+					pendingInvites.value.delete(friend.id);
+					return;
+				}
+
+				if (invite.status === "accepted") {
+					clearInterval(pollTimer);
+					pendingInvites.value.delete(friend.id);
+					// Add friend to players
+					selectedPlayers.value.push({
+						id: selectedPlayers.value.length,
+						name: friend.nick_name || friend.name || friend.email || "",
+						score: gameType.value,
+						legsWon: 0,
+						user_id: friend.id,
+						avatar: friend.avatar,
+					});
+					showInviteFriends.value = false;
+				} else if (invite.status === "declined" || invite.status === "expired") {
+					clearInterval(pollTimer);
+					pendingInvites.value.set(friend.id, { 
+						status: invite.status.charAt(0).toUpperCase() + invite.status.slice(1)
+					});
+					// Remove status after 2 seconds
+					setTimeout(() => {
+						pendingInvites.value.delete(friend.id);
+					}, 2000);
+				}
+			}, 5000);
+
+			// Store the timer reference
+			pendingInvites.value.set(friend.id, {
+				status: "Pending...",
+				timer: pollTimer
+			});
+		}
+	} catch (error) {
+		console.error("Failed to send game invite:", error);
+	}
+};
+
+// Cleanup timers when component is unmounted
+onUnmounted(() => {
+	for (const invite of pendingInvites.value.values()) {
+		if (invite.timer) {
+			clearInterval(invite.timer);
+		}
+	}
+});
 </script>
+
+<template>
+	<div class="container mx-auto p-4 pb-20">
+		<!-- Navigation -->
+		<div class="flex items-center justify-between mb-6">
+			<div class="flex items-center gap-2">
+				<NuxtLink to="/games" class="text-blue-600 hover:text-blue-800 flex items-center gap-1">
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+					</svg>
+					Back to Games
+				</NuxtLink>
+			</div>
+			<NuxtLink to="/assistant/dashboard" class="text-blue-600 hover:text-blue-800 flex items-center gap-1">
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+					/>
+				</svg>
+				Dashboard
+			</NuxtLink>
+		</div>
+
+		<!-- Game Setup -->
+		<div v-if="!gameStarted" class="space-y-6 max-w-md mx-auto">
+			<div class="flex items-center justify-between mb-4">
+				<h1 class="text-2xl md:text-3xl font-bold">X01 Game</h1>
+			</div>
+
+			<div class="bg-white p-4 md:p-6 rounded-lg shadow space-y-6">
+				<!-- Game Type Selection -->
+				<div class="space-y-2">
+					<label class="block font-medium text-gray-700">Game Type</label>
+					<div class="grid grid-cols-2 gap-2">
+						<button
+							v-for="type in [301, 501]"
+							:key="type"
+							@click="gameType = type"
+							:class="[
+								'py-3 px-4 rounded-lg text-center font-medium transition-colors',
+								gameType === type
+									? 'bg-blue-600 text-white'
+									: 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+							]"
+						>
+							{{ type }}
+						</button>
+					</div>
+				</div>
+
+				<!-- Number of Legs -->
+				<div class="space-y-2">
+					<label class="block font-medium text-gray-700">Best of Legs</label>
+					<div class="grid grid-cols-3 gap-2">
+						<button
+							v-for="legs in [1, 3, 5, 7, 9, 11, 13, 15]"
+							:key="legs"
+							@click="numberOfLegs = legs"
+							:class="[
+								'py-3 px-4 rounded-lg text-center font-medium transition-colors',
+								numberOfLegs === legs
+									? 'bg-blue-600 text-white'
+									: 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+							]"
+						>
+							{{ legs }}
+						</button>
+					</div>
+				</div>
+
+				<!-- Player Selection -->
+				<div class="space-y-3">
+					<label class="block font-medium text-gray-700">Players</label>
+					<div class="space-y-3">
+						<div
+							v-for="(player, index) in selectedPlayers"
+							:key="player.id"
+							class="bg-gray-50 p-3 rounded-lg space-y-2"
+						>
+							<div class="flex items-center justify-between">
+								<div class="flex items-center gap-2">
+									<img
+										v-if="player.avatar"
+										:src="player.avatar"
+										:alt="`${player.name}'s avatar`"
+										class="w-8 h-8 rounded-full object-cover"
+									/>
+									<span class="font-medium">{{ player.name }}</span>
+								</div>
+								<button
+									v-if="index > 0 && !player.user_id"
+									@click="removePlayer(index)"
+									class="text-red-600 hover:text-red-800"
+								>
+									<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M6 18L18 6M6 6l12 12"
+										/>
+									</svg>
+								</button>
+							</div>
+							<div class="flex flex-col gap-2">
+								<input
+									v-if="!player.user_id"
+									type="text"
+									v-model="player.name"
+									class="w-full p-3 border rounded-lg"
+									:placeholder="index === 0 ? 'Player name' : 'Guest player name'"
+								/>
+								<button
+									v-if="user && !isUserInGame && !player.user_id"
+									@click="useCurrentUser(index)"
+									class="w-full py-2 px-3 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+								>
+									Use My Account
+								</button>
+							</div>
+						</div>
+
+						<div class="flex gap-2">
+							<!-- Invite Friend Button -->
+							<button
+								v-if="selectedPlayers.length < 4 && !showInviteFriends"
+								@click="showInviteFriends = true"
+								class="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+							>
+								Invite Friend
+							</button>
+
+							<!-- Add Guest Player Button -->
+							<button
+								v-if="selectedPlayers.length < 4 && !showInviteFriends"
+								@click="addPlayer"
+								class="flex-1 py-2 px-4 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+							>
+								Add Guest
+							</button>
+						</div>
+
+						<!-- Friends List for Invites -->
+						<div v-if="showInviteFriends" class="space-y-3">
+							<h3 class="font-medium">Select a friend to invite:</h3>
+							<div
+								v-for="friend in friends"
+								:key="friend.id"
+								class="flex items-center justify-between bg-white p-3 rounded-lg border"
+							>
+								<div class="flex items-center gap-2">
+									<img
+										v-if="friend.avatar"
+										:src="friend.avatar"
+										:alt="`${friend.display_name}'s avatar`"
+										class="w-8 h-8 rounded-full object-cover"
+									/>
+									<div>
+										<div class="font-medium">{{ friend.display_name }}</div>
+										<div class="text-sm text-gray-600">{{ friend.email }}</div>
+									</div>
+								</div>
+								<button
+									@click="inviteFriend(friend)"
+									:disabled="pendingInvites.has(friend.id)"
+									:class="[
+										'px-3 py-1 rounded-lg text-sm font-medium',
+										pendingInvites.has(friend.id)
+											? 'bg-gray-100 text-gray-500'
+											: 'bg-blue-600 text-white hover:bg-blue-700',
+									]"
+								>
+									{{ pendingInvites.get(friend.id)?.status || "Invite" }}
+								</button>
+							</div>
+							<button
+								@click="showInviteFriends = false"
+								class="w-full py-2 px-4 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+							>
+								Cancel
+							</button>
+						</div>
+					</div>
+				</div>
+
+				<!-- Start Game Button -->
+				<button
+					@click="startGame"
+					class="w-full py-4 bg-green-600 text-white rounded-lg font-medium text-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-700 transition-colors"
+					:disabled="!isValidGameSetup"
+				>
+					Start Game
+				</button>
+			</div>
+		</div>
+
+		<!-- Game Board -->
+		<div v-else class="pb-20">
+			<!-- Game Header -->
+			<div class="flex items-center justify-between mb-4">
+				<div>
+					<h1 class="text-xl md:text-2xl font-bold">X01 Game</h1>
+					<p class="text-sm text-gray-600">Leg {{ currentLeg }} of {{ numberOfLegs }}</p>
+				</div>
+				<button @click="confirmCancelGame" class="p-2 text-red-600 hover:text-red-800">
+					<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M6 18L18 6M6 6l12 12"
+						></path>
+					</svg>
+				</button>
+			</div>
+
+			<!-- Player Scorecards List -->
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+				<div
+					v-for="(player, index) in selectedPlayers"
+					:key="index"
+					:class="[
+						'bg-white border p-4 rounded-lg',
+						currentPlayerIndex === index ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-200',
+					]"
+				>
+					<div class="flex items-center gap-2 mb-2">
+						<img
+							v-if="player.avatar"
+							:src="player.avatar"
+							:alt="`${player.name}'s avatar`"
+							class="w-8 h-8 rounded-full object-cover"
+						/>
+						<div class="flex-1">
+							<div class="flex items-center justify-between">
+								<span class="font-medium">{{ player.name }}</span>
+								<span class="text-lg font-bold">{{ player.score }}</span>
+							</div>
+							<div class="flex items-center justify-between text-sm text-gray-600">
+								<span>Legs won: {{ player.legsWon }}</span>
+								<span>Checkout: {{ getCheckoutPercentage(index) }}</span>
+							</div>
+						</div>
+					</div>
+					<div class="text-sm text-gray-600">Last throw: {{ formatLastThrow(getLastThrow(index)) }}</div>
+				</div>
+			</div>
+
+			<!-- Score Calculator and Game Controls -->
+			<div v-if="!isGameFinished" class="bg-white border border-gray-200 rounded-lg p-3">
+				<div class="mb-3">
+					<h3 class="flex items-center gap-2 text-base font-bold mb-1">
+						<img
+							v-if="selectedPlayers[currentPlayerIndex].avatar"
+							:src="selectedPlayers[currentPlayerIndex].avatar"
+							:alt="`${selectedPlayers[currentPlayerIndex].name}'s avatar`"
+							class="w-8 h-8 rounded-full object-cover"
+						/>
+						{{ selectedPlayers[currentPlayerIndex].name }}
+						<span class="text-gray-600">({{ selectedPlayers[currentPlayerIndex].score }})</span>
+					</h3>
+
+					<!-- Current Throw Display -->
+					<div class="bg-gray-50 p-2 rounded-lg mb-2">
+						<div class="grid grid-cols-3 gap-2 text-center">
+							<div v-for="(dart, i) in currentTurnDarts" :key="i" class="text-base font-medium">
+								{{ formatDart(dart) }}
+							</div>
+						</div>
+						<button
+							v-if="gameHistory.length > 0"
+							@click="undoLastThrow"
+							class="w-full mt-1 py-1 px-2 text-xs text-red-600 hover:text-red-800 font-medium flex items-center justify-center gap-1"
+						>
+							<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M3 10h10a4 4 0 0 1 4 4v2M3 10l6 6m-6-6l6-6"
+								/>
+							</svg>
+							Undo
+						</button>
+					</div>
+
+					<!-- Turn Total -->
+					<div class="text-center mb-2">
+						<div class="text-base font-bold text-blue-600">Total: {{ calculateTurnTotal() }}</div>
+						<div v-if="getCheckoutSuggestion(getCurrentPlayer.score)" class="text-xs text-gray-600 mt-1">
+							{{ getCheckoutSuggestion(getCurrentPlayer.score)?.join(" - ") }}
+						</div>
+					</div>
+
+					<!-- Multiplier Buttons -->
+					<div class="grid grid-cols-3 gap-1 mb-2">
+						<button
+							v-for="multiplier in multipliers"
+							:key="multiplier"
+							@click="setMultiplier(multiplier)"
+							:class="[
+								'py-1 px-2 rounded text-sm font-medium transition-colors',
+								currentMultiplier === multiplier
+									? 'bg-blue-600 text-white'
+									: 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+							]"
+						>
+							{{ multiplier === "single" ? "S" : multiplier === "double" ? "D" : "T" }}
+						</button>
+					</div>
+
+					<!-- Number Pad -->
+					<div class="grid grid-cols-3 gap-1">
+						<button
+							v-for="n in 20"
+							:key="n"
+							@click="addScore(n)"
+							class="py-2 bg-white border border-gray-200 rounded text-base font-medium hover:bg-gray-50 transition-colors active:bg-gray-100"
+						>
+							{{ n }}
+						</button>
+						<button
+							@click="addScore(25)"
+							class="py-2 bg-white border border-gray-200 rounded text-base font-medium hover:bg-gray-50 transition-colors active:bg-gray-100"
+						>
+							B
+						</button>
+						<button
+							@click="addScore(0)"
+							class="py-2 bg-white border border-gray-200 rounded text-base font-medium hover:bg-gray-50 transition-colors active:bg-gray-100"
+						>
+							0
+						</button>
+					</div>
+				</div>
+			</div>
+			<!-- Winner Display -->
+			<div
+				v-if="isGameFinished && winner"
+				class="mb-4 bg-green-50 border border-green-200 p-4 rounded-lg text-center"
+			>
+				<div class="text-2xl font-bold text-green-700 flex items-center justify-center gap-2">
+					<span class="text-3xl">🏆</span>
+					{{ winner.name }} wins!
+				</div>
+				<div class="flex gap-2 justify-center mt-4">
+					<button
+						v-if="!gameSaved"
+						@click="saveGame"
+						class="py-2 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+					>
+						Save Game
+					</button>
+					<button
+						@click="confirmCancelGame"
+						class="py-2 px-4 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+					>
+						New Game
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</template>
