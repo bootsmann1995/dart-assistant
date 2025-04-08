@@ -113,9 +113,6 @@ const emailError = ref("");
 const passwordError = ref("");
 const generalError = ref("");
 
-definePageMeta({
-	middleware: "auth",
-});
 
 const { loginAsync } = useAuth();
 const router = useRouter();

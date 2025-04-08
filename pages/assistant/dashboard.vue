@@ -4,7 +4,12 @@
 			<h1 class="text-2xl md:text-3xl font-bold">Welcome, {{ userName || 'Player' }}!</h1>
 		</div>
 
-		<div v-if="stats" class="grid grid-cols-1 gap-4 md:gap-6">
+		<div v-if="isLoading" class="text-center py-8">
+			<div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+			<p class="mt-4 text-gray-600">Loading your statistics...</p>
+		</div>
+
+		<div v-else-if="stats" class="grid grid-cols-1 gap-4 md:gap-6">
 			<!-- Action Buttons -->
 			<div class="flex flex-col sm:flex-row gap-4">
 				<NuxtLink
@@ -174,12 +179,17 @@ const { calculateStats } = useDashboardStats();
 const { getUserAsync } = useAuth();
 const stats = ref<any>(null);
 const userName = ref("");
+const isLoading = ref(true);
 
 onMounted(async () => {
-	stats.value = await calculateStats();
-	const userResp = await getUserAsync();
-	if (userResp?.user?.email) {
-		userName.value = userResp.user.email.split('@')[0];
+	try {
+		stats.value = await calculateStats();
+		const userResp = await getUserAsync();
+		if (userResp?.user?.email) {
+			userName.value = userResp.user.email.split('@')[0];
+		}
+	} finally {
+		isLoading.value = false;
 	}
 });
 </script>

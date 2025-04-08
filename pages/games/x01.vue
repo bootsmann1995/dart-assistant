@@ -1281,3 +1281,4 @@ function getCheckoutPercentage(playerIndex: number): string {
 	return stats.checkoutPercentage.toFixed(1);
 }
 </script>
+
