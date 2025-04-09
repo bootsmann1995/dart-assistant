@@ -127,17 +127,17 @@ onMounted(async () => {
 					typeof response.data.game_data === "string"
 						? JSON.parse(response.data.game_data)
 						: response.data.game_data;
-				
+
 				// Recalculate high scores for all players
 				if (parsedData.stats) {
 					for (const playerIndex in parsedData.stats) {
 						parsedData.stats[playerIndex] = {
 							...parsedData.stats[playerIndex],
-							...recalculateHighScores(parsedData, parseInt(playerIndex))
+							...recalculateHighScores(parsedData, parseInt(playerIndex)),
 						};
 					}
 				}
-				
+
 				gameData.value = parsedData;
 
 				// Get all user IDs from the game
@@ -289,7 +289,7 @@ const getLegHistory = (): LegHistory[] => {
 					checkoutSuccess: false,
 					checkoutAttempts: 0,
 				};
-				
+
 				// Create turn
 				const turn: LegTurn = {
 					turnIndex: Number(turnIndex),
@@ -307,20 +307,20 @@ const getLegHistory = (): LegHistory[] => {
 				// Handle bust and score update
 				const isBust = turnThrows.some((t) => t.wasBust);
 				const newScore = isBust ? currentScore : currentScore - turnScore;
-				
+
 				// For busted turns, always count as 3 darts for statistical purposes
-				// This ensures a busted turn counts as a full round of missed darts
+				// This ensures busted darts are properly accounted for in the average
 				if (isBust) {
 					// Always count as 3 darts for a busted turn, regardless of actual darts thrown
 					playerStats.darts += 3;
-					
+
 					turn.isBust = true;
 					turn.highlights.push("Bust");
 					turn.turnScore = 0;
 				} else {
 					// Normal counting for non-busted turns
 					playerStats.darts += turnThrows.length;
-					
+
 					// Add score-based highlights
 					if (turnScore === 180) turn.highlights.push("180");
 					else if (turnScore >= 140) turn.highlights.push("Ton+");
@@ -359,11 +359,11 @@ const getLegHistory = (): LegHistory[] => {
 					playerStats.first9Score += turnScore;
 					playerStats.first9Darts += isBust ? 3 : turnThrows.length;
 				}
-				
+
 				if (turnScore > playerStats.highestScore && !isBust) {
 					playerStats.highestScore = turnScore;
 				}
-				
+
 				// Save player stats back to leg data
 				legData.players[playerIndex] = playerStats;
 
@@ -395,44 +395,66 @@ const getLegHistory = (): LegHistory[] => {
 // Function to recalculate high scores (180s, 140+, 100+)
 const recalculateHighScores = (gameData: GameData, playerIndex: number) => {
 	// Get all throws by this player
-	const playerThrows = gameData.history.filter(t => t.playerIndex === playerIndex);
-	
+	const playerThrows = gameData.history.filter((t) => t.playerIndex === playerIndex);
+
 	// Group throws by turn
 	const turnGroups: Record<string, GameThrow[]> = {};
-	playerThrows.forEach(throw_ => {
+	// Track which turns we've already processed
+	const processedTurns = new Set<string>();
+	
+	playerThrows.forEach((throw_) => {
 		const turnKey = `${throw_.leg}-${throw_.turnIndex}`;
 		if (!turnGroups[turnKey]) {
 			turnGroups[turnKey] = [];
 		}
 		turnGroups[turnKey].push(throw_);
 	});
-	
+
 	// Count high scores
 	let oneEighties = 0;
 	let oneFortyPlus = 0;
 	let hundredPlus = 0;
-	
-	// Process each turn
-	Object.values(turnGroups).forEach(turn => {
+
+	// Process each turn only once
+	Object.entries(turnGroups).forEach(([turnKey, turn]) => {
+		// Skip if already processed
+		if (processedTurns.has(turnKey)) return;
+		processedTurns.add(turnKey);
+		
 		// Skip incomplete turns (less than 3 darts)
 		if (turn.length !== 3) return;
 		
+		// Skip turns with busts
+		if (turn.some(t => t.wasBust)) return;
+		
+		// Ensure all darts are from the same player
+		if (!turn.every(t => t.playerIndex === playerIndex)) return;
+
 		// Calculate turn total
 		const turnTotal = turn.reduce((sum, dart) => {
-			// Skip busted darts
-			if (dart.wasBust) return sum;
-			
 			// Calculate dart score
 			const multiplierValue = dart.multiplier === "triple" ? 3 : dart.multiplier === "double" ? 2 : 1;
 			return sum + dart.value * multiplierValue;
 		}, 0);
-		
+
 		// Count high scores
-		if (turnTotal === 180) oneEighties++;
+		if (turnTotal === 180) {
+			console.log("History 180:", {
+				leg: turn[0].leg,
+				turnIndex: turn[0].turnIndex,
+				playerIndex: turn[0].playerIndex,
+				darts: turn.map(t => ({
+					value: t.value,
+					multiplier: t.multiplier,
+					score: t.value * (t.multiplier === "triple" ? 3 : t.multiplier === "double" ? 2 : 1)
+				}))
+			});
+			oneEighties++;
+		}
 		else if (turnTotal >= 140) oneFortyPlus++;
 		else if (turnTotal >= 100) hundredPlus++;
 	});
-	
+
 	return { oneEighties, oneFortyPlus, hundredPlus };
 };
 </script>

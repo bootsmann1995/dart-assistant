@@ -89,19 +89,6 @@ const currentTurnIndex = ref(0);
 const legStarters = ref<number[]>([0]); // Start with player 0 for first leg
 
 const isValidGameSetup = computed(() => {
-	// Debug player names
-	console.log(
-		"Player names:",
-		selectedPlayers.value.map((p) => p.name)
-	);
-	console.log(
-		"All players have names:",
-		selectedPlayers.value.every((player) => player.name.trim())
-	);
-	console.log("Number of legs > 0:", numberOfLegs.value > 0);
-	console.log("At least one player:", selectedPlayers.value.length >= 1);
-	console.log("No pending invites:", pendingInvites.value.size === 0);
-
 	return (
 		selectedPlayers.value.every((player) => player.name.trim()) &&
 		numberOfLegs.value > 0 &&
@@ -1314,37 +1301,37 @@ const draggedPlayer = ref<number | null>(null);
 
 // Function to handle drag start
 function onDragStart(index: number) {
-  isDragging.value = true;
-  draggedPlayer.value = index;
+	isDragging.value = true;
+	draggedPlayer.value = index;
 }
 
 // Function to handle drag over
 function onDragOver(event: DragEvent) {
-  event.preventDefault();
+	event.preventDefault();
 }
 
 // Function to handle drop
 function onDrop(index: number) {
-  if (draggedPlayer.value !== null && draggedPlayer.value !== index) {
-    // Get the player being moved
-    const playerToMove = selectedPlayers.value[draggedPlayer.value];
-    
-    // Remove the player from the original position
-    selectedPlayers.value.splice(draggedPlayer.value, 1);
-    
-    // Insert the player at the new position
-    selectedPlayers.value.splice(index, 0, playerToMove);
-  }
-  
-  // Reset drag state
-  isDragging.value = false;
-  draggedPlayer.value = null;
+	if (draggedPlayer.value !== null && draggedPlayer.value !== index) {
+		// Get the player being moved
+		const playerToMove = selectedPlayers.value[draggedPlayer.value];
+
+		// Remove the player from the original position
+		selectedPlayers.value.splice(draggedPlayer.value, 1);
+
+		// Insert the player at the new position
+		selectedPlayers.value.splice(index, 0, playerToMove);
+	}
+
+	// Reset drag state
+	isDragging.value = false;
+	draggedPlayer.value = null;
 }
 
 // Function to handle drag end
 function onDragEnd() {
-  isDragging.value = false;
-  draggedPlayer.value = null;
+	isDragging.value = false;
+	draggedPlayer.value = null;
 }
 </script>
 
@@ -1433,14 +1420,25 @@ function onDragEnd() {
 							@drop="onDrop(index)"
 							@dragend="onDragEnd"
 							draggable="true"
-							:class="{ 'border-2 border-blue-400': draggedPlayer === index, 'border-2 border-dashed border-gray-300': isDragging && draggedPlayer !== index }"
+							:class="{
+								'border-2 border-blue-400': draggedPlayer === index,
+								'border-2 border-dashed border-gray-300': isDragging && draggedPlayer !== index,
+							}"
 						>
 							<div class="flex items-center justify-between">
 								<div class="flex items-center gap-2">
 									<!-- Drag handle -->
-									<div class="cursor-move text-gray-400 hover:text-gray-600 touch-manipulation" title="Drag to reorder">
+									<div
+										class="cursor-move text-gray-400 hover:text-gray-600 touch-manipulation"
+										title="Drag to reorder"
+									>
 										<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M4 8h16M4 16h16"
+											></path>
 										</svg>
 									</div>
 									<img
@@ -1452,7 +1450,15 @@ function onDragEnd() {
 									<span class="font-medium">{{ player.name }}</span>
 									<!-- Player order indicator -->
 									<span class="ml-1 text-sm text-gray-500">
-										({{ index === 0 ? 'First' : index === 1 ? 'Second' : index === 2 ? 'Third' : 'Fourth' }})
+										({{
+											index === 0
+												? "First"
+												: index === 1
+													? "Second"
+													: index === 2
+														? "Third"
+														: "Fourth"
+										}})
 									</span>
 								</div>
 								<button
