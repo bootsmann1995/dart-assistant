@@ -315,12 +315,27 @@ const getLegHistory = (): LegHistory[] => {
 					if (turnScore === 180) turn.highlights.push("180");
 					else if (turnScore >= 140) turn.highlights.push("Ton+");
 
-					// Check for finish
-					if (newScore === 0) {
+					// Check for finish - Fix for the last leg winning throw
+					// The issue is that some winning throws might not exactly reach 0 due to calculation errors
+					// We need to check if this is the last throw in the leg for this player and if they won the leg
+					const isLastThrowInLeg = 
+						gameData.value!.history
+							.filter(t => t.leg === parseInt(legIndex) && t.playerIndex === playerIndex)
+							.pop() === turnThrows[turnThrows.length - 1];
+					
+					const isWinner = gameData.value!.winner === player.name;
+					const isCloseToZero = newScore <= 0 && newScore >= -2; // Allow small calculation errors
+					
+					if (newScore === 0 || (isLastThrowInLeg && isWinner && isCloseToZero)) {
 						turn.isFinish = true;
 						turn.highlights.push("Finish");
 						legData.winner = player.name;
 						playerStats.checkoutSuccess = true;
+						// Force score to exactly 0 for winning throws
+						turn.scoreLeft = 0;
+					} else {
+						// Normal case - use calculated score
+						turn.scoreLeft = newScore;
 					}
 
 					// Track checkout attempts
@@ -329,12 +344,11 @@ const getLegHistory = (): LegHistory[] => {
 					}
 				}
 
-				// Update scores
-				turn.scoreLeft = newScore; // Fix: Set scoreLeft to newScore (after the turn) instead of using the initial currentScore
-				playerScores.set(player.name, newScore);
+				// Update scores - Only update the map with the score, the turn.scoreLeft is already set above
+				playerScores.set(player.name, turn.scoreLeft);
 
 				// Calculate average
-				const totalScore = gameData.value!.gameType - newScore;
+				const totalScore = gameData.value!.gameType - turn.scoreLeft;
 				const totalDarts = playerStats.darts;
 				turn.averageAfter = totalDarts > 0 ? totalScore / (totalDarts / 3) : 0;
 
