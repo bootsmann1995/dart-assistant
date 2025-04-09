@@ -367,11 +367,11 @@ const getLegHistory = (): LegHistory[] => {
 
 				<!-- Player Scores -->
 				<div class="mb-6">
-					<div class="flex items-center space-x-4">
+					<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
 						<div
 							v-for="(player, index) in gameData.players"
 							:key="index"
-							class="flex-1 p-4 bg-gray-50 rounded-lg"
+							class="p-4 bg-gray-50 rounded-lg"
 						>
 							<div class="flex items-center justify-center gap-3">
 								<img

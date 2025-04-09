@@ -35,27 +35,27 @@
 						<div class="flex-grow">
 							<div class="flex items-center gap-3 mb-2">
 								<div class="flex -space-x-2">
-									<!-- Winner -->
-									<div v-if="getGamePlayers(game.game_data)?.winner.user_id" class="relative z-10">
+									<!-- Show all players instead of just winner/loser -->
+									<div 
+										v-for="(player, index) in getAllGamePlayers(game.game_data)" 
+										:key="index" 
+										class="relative" 
+										:style="{ zIndex: 10 - index, marginLeft: index > 0 ? '-8px' : '0' }"
+									>
 										<img
-											:src="getPlayerData(getGamePlayers(game.game_data)?.winner.user_id)?.avatar"
-											:alt="
-												getPlayerData(getGamePlayers(game.game_data)?.winner.user_id)
-													?.display_name
-											"
+											v-if="player.user_id && getPlayerData(player.user_id)?.avatar"
+											:src="getPlayerData(player.user_id)?.avatar"
+											:alt="getPlayerData(player.user_id)?.display_name || player.name"
 											class="w-8 h-8 rounded-full border-2 border-white"
+											:class="{ 'ring-2 ring-green-500': player.name === getGameWinner(game.game_data) }"
 										/>
-									</div>
-									<!-- Loser -->
-									<div v-if="getGamePlayers(game.game_data)?.loser.user_id" class="relative z-0">
-										<img
-											:src="getPlayerData(getGamePlayers(game.game_data)?.loser.user_id)?.avatar"
-											:alt="
-												getPlayerData(getGamePlayers(game.game_data)?.loser.user_id)
-													?.display_name
-											"
-											class="w-8 h-8 rounded-full border-2 border-white"
-										/>
+										<div 
+											v-else
+											class="w-8 h-8 rounded-full border-2 border-white bg-gray-300 flex items-center justify-center text-xs font-medium text-gray-600"
+											:class="{ 'ring-2 ring-green-500': player.name === getGameWinner(game.game_data) }"
+										>
+											{{ player.name.charAt(0).toUpperCase() }}
+										</div>
 									</div>
 								</div>
 								<h3 class="text-lg font-semibold">
@@ -175,16 +175,17 @@ function formatDate(dateString: string) {
 
 function getGameTitle(gameData: string) {
 	try {
-		const players = getGamePlayers(gameData);
-		if (!players) return "Game Details";
+		const players = getAllGamePlayers(gameData);
+		if (!players || players.length === 0) return "Game Details";
 
-		const winnerData = getPlayerData(players.winner.user_id);
-		const loserData = getPlayerData(players.loser.user_id);
+		// Format player names
+		const playerNames = players.map(player => {
+			const userData = getPlayerData(player.user_id);
+			return userData?.display_name || player.name;
+		});
 
-		const winnerName = winnerData?.display_name || players.winner.name;
-		const loserName = loserData?.display_name || players.loser.name;
-
-		return `${winnerName} vs ${loserName}`;
+		// Join player names with vs
+		return playerNames.join(' vs ');
 	} catch (e) {
 		return "Game Details";
 	}
@@ -229,6 +230,24 @@ function getPlayerAverage(gameData: string, userId: string) {
 function getPlayerData(userId: string | undefined): UserData | null {
 	if (!userId) return null;
 	return usersData.value.get(userId) || null;
+}
+
+function getGameWinner(gameData: string): string | null {
+	try {
+		const data = typeof gameData === "string" ? JSON.parse(gameData) : gameData;
+		return data.winner || null;
+	} catch (e) {
+		return null;
+	}
+}
+
+function getAllGamePlayers(gameData: string): GamePlayer[] {
+	try {
+		const data = typeof gameData === "string" ? JSON.parse(gameData) : gameData;
+		return data.players || [];
+	} catch (e) {
+		return [];
+	}
 }
 
 function getGamePlayers(gameData: string): { winner: GamePlayer; loser: GamePlayer } | null {
