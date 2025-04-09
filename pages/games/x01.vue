@@ -1568,9 +1568,12 @@ onUnmounted(() => {
 
 					<!-- Current Throw Display -->
 					<div class="bg-gray-50 p-2 rounded-lg mb-2">
-						<div class="grid grid-cols-3 gap-2 text-center">
+						<div class="grid grid-cols-3 gap-2 text-center min-h-[28px]">
 							<div v-for="(dart, i) in currentTurnDarts" :key="i" class="text-base font-medium">
 								{{ formatDart(dart) }}
+							</div>
+							<div v-for="i in 3 - currentTurnDarts.length" :key="`empty-${i}`" class="text-base font-medium text-gray-300">
+								-
 							</div>
 						</div>
 						<button
