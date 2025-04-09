@@ -43,7 +43,7 @@
 		</div>
 
 		<!-- Action Buttons -->
-		<div v-if="!isLoading" class="flex flex-col sm:flex-row gap-4">
+		<div v-if="!isLoading" class="flex flex-col sm:flex-row gap-4 mb-6">
 			<NuxtLink
 				to="/games/"
 				class="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white text-center rounded-lg hover:bg-blue-700 shadow-sm"
@@ -63,14 +63,15 @@
 				Friends
 			</NuxtLink>
 			<NuxtLink
-				to="/profile"
+				to="/assistant/profile"
 				class="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white text-center rounded-lg hover:bg-blue-700 shadow-sm"
 			>
 				Profile Settings
 			</NuxtLink>
 		</div>
 
-		<div v-else-if="stats" class="grid grid-cols-1 gap-4 md:gap-6">
+		<!-- Stats Section -->
+		<div v-if="stats && !isLoading" class="grid grid-cols-1 gap-4 md:gap-6">
 			<!-- Game Invites Section -->
 
 			<!-- Overall Stats Card -->
