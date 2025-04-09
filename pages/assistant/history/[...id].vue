@@ -278,16 +278,7 @@ const getLegHistory = (): LegHistory[] => {
 					checkoutSuccess: false,
 					checkoutAttempts: 0,
 				};
-				playerStats.darts += turnThrows.length;
-				if (playerStats.darts <= 9) {
-					playerStats.first9Score += turnScore;
-					playerStats.first9Darts += turnThrows.length;
-				}
-				if (turnScore > playerStats.highestScore) {
-					playerStats.highestScore = turnScore;
-				}
-				legData.players[playerIndex] = playerStats;
-
+				
 				// Create turn
 				const turn: LegTurn = {
 					turnIndex: Number(turnIndex),
@@ -305,12 +296,20 @@ const getLegHistory = (): LegHistory[] => {
 				// Handle bust and score update
 				const isBust = turnThrows.some((t) => t.wasBust);
 				const newScore = isBust ? currentScore : currentScore - turnScore;
-
+				
+				// For busted turns, always count as 3 darts for statistical purposes
+				// This ensures a busted turn counts as a full round of missed darts
 				if (isBust) {
+					// Always count as 3 darts for a busted turn, regardless of actual darts thrown
+					playerStats.darts += 3;
+					
 					turn.isBust = true;
 					turn.highlights.push("Bust");
 					turn.turnScore = 0;
 				} else {
+					// Normal counting for non-busted turns
+					playerStats.darts += turnThrows.length;
+					
 					// Add score-based highlights
 					if (turnScore === 180) turn.highlights.push("180");
 					else if (turnScore >= 140) turn.highlights.push("Ton+");
@@ -318,14 +317,14 @@ const getLegHistory = (): LegHistory[] => {
 					// Check for finish - Fix for the last leg winning throw
 					// The issue is that some winning throws might not exactly reach 0 due to calculation errors
 					// We need to check if this is the last throw in the leg for this player and if they won the leg
-					const isLastThrowInLeg = 
-						gameData.value!.history
-							.filter(t => t.leg === parseInt(legIndex) && t.playerIndex === playerIndex)
+					const isLastThrowInLeg =
+						gameData
+							.value!.history.filter((t) => t.leg === parseInt(legIndex) && t.playerIndex === playerIndex)
 							.pop() === turnThrows[turnThrows.length - 1];
-					
+
 					const isWinner = gameData.value!.winner === player.name;
 					const isCloseToZero = newScore <= 0 && newScore >= -2; // Allow small calculation errors
-					
+
 					if (newScore === 0 || (isLastThrowInLeg && isWinner && isCloseToZero)) {
 						turn.isFinish = true;
 						turn.highlights.push("Finish");
@@ -344,13 +343,34 @@ const getLegHistory = (): LegHistory[] => {
 					}
 				}
 
+				// Update first9 stats and highest score
+				if (playerStats.darts <= 9) {
+					playerStats.first9Score += turnScore;
+					playerStats.first9Darts += isBust ? 3 : turnThrows.length;
+				}
+				
+				if (turnScore > playerStats.highestScore && !isBust) {
+					playerStats.highestScore = turnScore;
+				}
+				
+				// Save player stats back to leg data
+				legData.players[playerIndex] = playerStats;
+
 				// Update scores - Only update the map with the score, the turn.scoreLeft is already set above
 				playerScores.set(player.name, turn.scoreLeft);
 
 				// Calculate average
 				const totalScore = gameData.value!.gameType - turn.scoreLeft;
 				const totalDarts = playerStats.darts;
-				turn.averageAfter = totalDarts > 0 ? totalScore / (totalDarts / 3) : 0;
+
+				// Recalculate average based on actual scores, not just the difference between starting and current score
+				// This ensures busted darts are properly accounted for in the average
+				const actualScoreSum =
+					legData.turns
+						.filter((t) => t.playerName === player.name && !t.isBust)
+						.reduce((sum, t) => sum + t.turnScore, 0) + (turn.isBust ? 0 : turn.turnScore);
+
+				turn.averageAfter = totalDarts > 0 ? actualScoreSum / (totalDarts / 3) : 0;
 
 				legData.turns.push(turn);
 			});
@@ -382,11 +402,7 @@ const getLegHistory = (): LegHistory[] => {
 				<!-- Player Scores -->
 				<div class="mb-6">
 					<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-						<div
-							v-for="(player, index) in gameData.players"
-							:key="index"
-							class="p-4 bg-gray-50 rounded-lg"
-						>
+						<div v-for="(player, index) in gameData.players" :key="index" class="p-4 bg-gray-50 rounded-lg">
 							<div class="flex items-center justify-center gap-3">
 								<img
 									v-if="getPlayerAvatar(player.name)"
