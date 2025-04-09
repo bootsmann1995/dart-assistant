@@ -119,23 +119,36 @@ export const useDashboardStats = () => {
 					first9Count = 0;
 				}
 
-				// Calculate score for this throw
-				const dartScore =
-					throw_.value * (throw_.multiplier === "double" ? 2 : throw_.multiplier === "triple" ? 3 : 1);
+				// Calculate score for this throw - only count if not a bust
+				if (!throw_.wasBust) {
+					const dartScore =
+						throw_.value * (throw_.multiplier === "double" ? 2 : throw_.multiplier === "triple" ? 3 : 1);
+					
+					legScore += dartScore;
+				}
+				
+				// Always count the dart thrown
+				legDarts++;
 
 				// Track high scores in this turn
 				const turnKey = `${throw_.leg}-${throw_.turnIndex}`;
 				const turnThrows = turnGroups.get(turnKey) || [];
-				const turnScore = turnThrows.reduce((sum: number, t: DartThrow) => {
-					return sum + t.value * (t.multiplier === "double" ? 2 : t.multiplier === "triple" ? 3 : 1);
-				}, 0);
+				
+				// Only calculate turn score if it's not a bust
+				if (!turnThrows.some(t => t.wasBust)) {
+					const turnScore = turnThrows.reduce((sum: number, t: DartThrow) => {
+						return sum + t.value * (t.multiplier === "double" ? 2 : t.multiplier === "triple" ? 3 : 1);
+					}, 0);
 
-				if (turnScore === 180) scores180++;
-				else if (turnScore >= 140) scores140Plus++;
-				else if (turnScore >= 100) scores100Plus++;
+					if (turnScore === 180) scores180++;
+					else if (turnScore >= 140) scores140Plus++;
+					else if (turnScore >= 100) scores100Plus++;
+				}
 
-				// Track first 9
-				if (first9Count < 3) {
+				// Track first 9 - only count non-bust throws
+				if (first9Count < 3 && !throw_.wasBust) {
+					const dartScore = 
+						throw_.value * (throw_.multiplier === "double" ? 2 : throw_.multiplier === "triple" ? 3 : 1);
 					first9Score += dartScore;
 					first9Count++;
 					if (first9Count === 3) {
@@ -143,9 +156,6 @@ export const useDashboardStats = () => {
 						totalFirst9Rounds++;
 					}
 				}
-
-				legScore += dartScore;
-				legDarts++;
 
 				// Track checkouts - only on the last throw of a turn
 				if (throw_ === turnThrows[turnThrows.length - 1]) {
