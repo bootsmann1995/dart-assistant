@@ -1307,6 +1307,45 @@ onUnmounted(() => {
 		}
 	}
 });
+
+// For drag and drop functionality
+const isDragging = ref(false);
+const draggedPlayer = ref<number | null>(null);
+
+// Function to handle drag start
+function onDragStart(index: number) {
+  isDragging.value = true;
+  draggedPlayer.value = index;
+}
+
+// Function to handle drag over
+function onDragOver(event: DragEvent) {
+  event.preventDefault();
+}
+
+// Function to handle drop
+function onDrop(index: number) {
+  if (draggedPlayer.value !== null && draggedPlayer.value !== index) {
+    // Get the player being moved
+    const playerToMove = selectedPlayers.value[draggedPlayer.value];
+    
+    // Remove the player from the original position
+    selectedPlayers.value.splice(draggedPlayer.value, 1);
+    
+    // Insert the player at the new position
+    selectedPlayers.value.splice(index, 0, playerToMove);
+  }
+  
+  // Reset drag state
+  isDragging.value = false;
+  draggedPlayer.value = null;
+}
+
+// Function to handle drag end
+function onDragEnd() {
+  isDragging.value = false;
+  draggedPlayer.value = null;
+}
 </script>
 
 <template>
@@ -1389,9 +1428,21 @@ onUnmounted(() => {
 							v-for="(player, index) in selectedPlayers"
 							:key="player.id"
 							class="bg-gray-50 p-3 rounded-lg space-y-2"
+							@dragstart="onDragStart(index)"
+							@dragover="onDragOver"
+							@drop="onDrop(index)"
+							@dragend="onDragEnd"
+							draggable="true"
+							:class="{ 'border-2 border-blue-400': draggedPlayer === index, 'border-2 border-dashed border-gray-300': isDragging && draggedPlayer !== index }"
 						>
 							<div class="flex items-center justify-between">
 								<div class="flex items-center gap-2">
+									<!-- Drag handle -->
+									<div class="cursor-move text-gray-400 hover:text-gray-600 touch-manipulation" title="Drag to reorder">
+										<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path>
+										</svg>
+									</div>
 									<img
 										v-if="player.avatar"
 										:src="player.avatar"
@@ -1399,6 +1450,10 @@ onUnmounted(() => {
 										class="w-8 h-8 rounded-full object-cover"
 									/>
 									<span class="font-medium">{{ player.name }}</span>
+									<!-- Player order indicator -->
+									<span class="ml-1 text-sm text-gray-500">
+										({{ index === 0 ? 'First' : index === 1 ? 'Second' : index === 2 ? 'Third' : 'Fourth' }})
+									</span>
 								</div>
 								<button
 									v-if="index > 0 && !player.user_id"
