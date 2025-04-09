@@ -1065,6 +1065,11 @@ function getCheckoutPercentage(playerIndex: number): string {
 	return stats.checkoutPercentage.toFixed(1);
 }
 
+function getPlayerAverage(playerIndex: number): number {
+	const stats = getPlayerStats(playerIndex);
+	return stats.average;
+}
+
 const showInviteFriends = ref(false);
 const friends = ref<ExtendedFriend[]>([]);
 const pendingInvites = ref<Map<string, { status: string; requestId?: string; timer?: NodeJS.Timeout }>>(new Map());
@@ -1539,7 +1544,8 @@ onUnmounted(() => {
 							</div>
 						</div>
 					</div>
-					<div class="text-sm text-gray-600">Last throw: {{ formatLastThrow(getLastThrow(index)) }}</div>
+					<div class="text-sm text-gray-600">Last round: {{ formatLastTurn(index) }}</div>
+					<div class="text-sm text-gray-600">Current avg: {{ getPlayerAverage(index).toFixed(2) }}</div>
 				</div>
 			</div>
 

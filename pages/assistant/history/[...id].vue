@@ -330,7 +330,7 @@ const getLegHistory = (): LegHistory[] => {
 				}
 
 				// Update scores
-				turn.scoreLeft = newScore;
+				turn.scoreLeft = newScore; // Fix: Set scoreLeft to newScore (after the turn) instead of using the initial currentScore
 				playerScores.set(player.name, newScore);
 
 				// Calculate average
