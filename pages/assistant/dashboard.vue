@@ -42,30 +42,36 @@
 			</div>
 		</div>
 
+		<!-- Action Buttons -->
+		<div v-if="!isLoading" class="flex flex-col sm:flex-row gap-4">
+			<NuxtLink
+				to="/games/"
+				class="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white text-center rounded-lg hover:bg-blue-700 shadow-sm"
+			>
+				New Game
+			</NuxtLink>
+			<NuxtLink
+				to="/assistant/history"
+				class="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white text-center rounded-lg hover:bg-blue-700 shadow-sm"
+			>
+				Game History
+			</NuxtLink>
+			<NuxtLink
+				to="/assistant/friends"
+				class="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white text-center rounded-lg hover:bg-blue-700 shadow-sm"
+			>
+				Friends
+			</NuxtLink>
+			<NuxtLink
+				to="/profile"
+				class="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white text-center rounded-lg hover:bg-blue-700 shadow-sm"
+			>
+				Profile Settings
+			</NuxtLink>
+		</div>
+
 		<div v-else-if="stats" class="grid grid-cols-1 gap-4 md:gap-6">
 			<!-- Game Invites Section -->
-
-			<!-- Action Buttons -->
-			<div class="flex flex-col sm:flex-row gap-4">
-				<NuxtLink
-					to="/games/"
-					class="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white text-center rounded-lg hover:bg-blue-700 shadow-sm"
-				>
-					New Game
-				</NuxtLink>
-				<NuxtLink
-					to="/assistant/history"
-					class="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white text-center rounded-lg hover:bg-blue-700 shadow-sm"
-				>
-					Game History
-				</NuxtLink>
-				<NuxtLink
-					to="/assistant/friends"
-					class="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white text-center rounded-lg hover:bg-blue-700 shadow-sm"
-				>
-					Friends
-				</NuxtLink>
-			</div>
 
 			<!-- Overall Stats Card -->
 			<div class="bg-white rounded-lg shadow p-4 md:p-6">
