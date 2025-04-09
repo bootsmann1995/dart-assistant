@@ -45,7 +45,11 @@ export const useDashboardStats = () => {
 		const recentGames = gamesResponse.data
 			.filter((game) => {
 				const gameData = typeof game.game_data === "string" ? JSON.parse(game.game_data) : game.game_data;
-				return gameData.players.some((p) => p.name === authResult.user.email);
+				// Check if user is in the game by email or user_id
+				return gameData.players.some((p) => 
+					p.name === authResult.user.email || 
+					p.user_id === authResult.user.id
+				);
 			})
 			.slice(0, 30)
 			.map((game) => (typeof game.game_data === "string" ? JSON.parse(game.game_data) : game.game_data));
@@ -67,7 +71,7 @@ export const useDashboardStats = () => {
 		const checkoutMisses = new Map<number, { attempts: number; successes: number }>();
 
 		for (const game of recentGames) {
-			const playerIndex = game.players.findIndex((p) => p.name === authResult.user.email);
+			const playerIndex = game.players.findIndex((p) => p.name === authResult.user.email || p.user_id === authResult.user.id);
 			if (playerIndex === -1) continue;
 
 			const player = game.players[playerIndex];
