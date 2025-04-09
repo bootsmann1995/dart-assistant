@@ -526,6 +526,9 @@ function moveToNextPlayer() {
 
 	// Reset bust flag
 	wasTurnBusted.value = false;
+	
+	// Clear current turn darts
+	currentTurnDarts.value = [];
 }
 
 function undoLastThrow() {
@@ -1211,7 +1214,7 @@ const inviteFriend = async (friend: ExtendedFriend) => {
 				});
 				// Remove status after 2 seconds
 				setTimeout(() => {
-					pendingInvites.value.delete(friend.id);
+					pendingInvites.value.delete(friendId);
 				}, 2000);
 			}
 		}, 120000); // 2 minutes
