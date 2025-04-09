@@ -127,6 +127,17 @@ onMounted(async () => {
 					typeof response.data.game_data === "string"
 						? JSON.parse(response.data.game_data)
 						: response.data.game_data;
+				
+				// Recalculate high scores for all players
+				if (parsedData.stats) {
+					for (const playerIndex in parsedData.stats) {
+						parsedData.stats[playerIndex] = {
+							...parsedData.stats[playerIndex],
+							...recalculateHighScores(parsedData, parseInt(playerIndex))
+						};
+					}
+				}
+				
 				gameData.value = parsedData;
 
 				// Get all user IDs from the game
@@ -379,6 +390,50 @@ const getLegHistory = (): LegHistory[] => {
 	});
 
 	return legs;
+};
+
+// Function to recalculate high scores (180s, 140+, 100+)
+const recalculateHighScores = (gameData: GameData, playerIndex: number) => {
+	// Get all throws by this player
+	const playerThrows = gameData.history.filter(t => t.playerIndex === playerIndex);
+	
+	// Group throws by turn
+	const turnGroups: Record<string, GameThrow[]> = {};
+	playerThrows.forEach(throw_ => {
+		const turnKey = `${throw_.leg}-${throw_.turnIndex}`;
+		if (!turnGroups[turnKey]) {
+			turnGroups[turnKey] = [];
+		}
+		turnGroups[turnKey].push(throw_);
+	});
+	
+	// Count high scores
+	let oneEighties = 0;
+	let oneFortyPlus = 0;
+	let hundredPlus = 0;
+	
+	// Process each turn
+	Object.values(turnGroups).forEach(turn => {
+		// Skip incomplete turns (less than 3 darts)
+		if (turn.length !== 3) return;
+		
+		// Calculate turn total
+		const turnTotal = turn.reduce((sum, dart) => {
+			// Skip busted darts
+			if (dart.wasBust) return sum;
+			
+			// Calculate dart score
+			const multiplierValue = dart.multiplier === "triple" ? 3 : dart.multiplier === "double" ? 2 : 1;
+			return sum + dart.value * multiplierValue;
+		}, 0);
+		
+		// Count high scores
+		if (turnTotal === 180) oneEighties++;
+		else if (turnTotal >= 140) oneFortyPlus++;
+		else if (turnTotal >= 100) hundredPlus++;
+	});
+	
+	return { oneEighties, oneFortyPlus, hundredPlus };
 };
 </script>
 

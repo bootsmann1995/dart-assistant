@@ -90,12 +90,18 @@ const legStarters = ref<number[]>([0]); // Start with player 0 for first leg
 
 const isValidGameSetup = computed(() => {
 	// Debug player names
-	console.log("Player names:", selectedPlayers.value.map(p => p.name));
-	console.log("All players have names:", selectedPlayers.value.every((player) => player.name.trim()));
+	console.log(
+		"Player names:",
+		selectedPlayers.value.map((p) => p.name)
+	);
+	console.log(
+		"All players have names:",
+		selectedPlayers.value.every((player) => player.name.trim())
+	);
 	console.log("Number of legs > 0:", numberOfLegs.value > 0);
 	console.log("At least one player:", selectedPlayers.value.length >= 1);
 	console.log("No pending invites:", pendingInvites.value.size === 0);
-	
+
 	return (
 		selectedPlayers.value.every((player) => player.name.trim()) &&
 		numberOfLegs.value > 0 &&
@@ -526,7 +532,7 @@ function moveToNextPlayer() {
 
 	// Reset bust flag
 	wasTurnBusted.value = false;
-	
+
 	// Clear current turn darts
 	currentTurnDarts.value = [];
 }
@@ -718,7 +724,7 @@ async function checkLegWinner() {
 function useCurrentUser(playerIndex: number) {
 	if (user.value?.email) {
 		const displayName = user.value.metadata?.nick_name || user.value.metadata?.full_name || user.value.email;
-		
+
 		// If playerIndex is out of bounds, create a new player
 		if (playerIndex >= selectedPlayers.value.length) {
 			selectedPlayers.value.push({
@@ -735,7 +741,7 @@ function useCurrentUser(playerIndex: number) {
 			selectedPlayers.value[playerIndex].user_id = user.value.metadata?.user_id;
 			selectedPlayers.value[playerIndex].avatar = user.value.metadata?.avatar;
 		}
-		
+
 		// Make sure the player name is not empty (this could cause isValidGameSetup to fail)
 		if (!selectedPlayers.value[playerIndex].name.trim()) {
 			selectedPlayers.value[playerIndex].name = "Player " + (playerIndex + 1);
@@ -1096,43 +1102,45 @@ const checkPendingInvites = async () => {
 	const pendingRequestIds = Array.from(pendingInvites.value.entries())
 		.filter(([_, data]) => data.requestId && data.status === "Pending...")
 		.map(([_, data]) => data.requestId as string);
-	
+
 	if (pendingRequestIds.length === 0) return;
-	
+
 	try {
 		// Check status for all pending invites
 		for (const requestId of pendingRequestIds) {
 			const status = await getInviteStatusAsync(requestId);
 			console.log(`Invite status for ${requestId}: ${status}`);
-			
-			const friendEntry = Array.from(pendingInvites.value.entries())
-				.find(([_, data]) => data.requestId === requestId);
-				
+
+			const friendEntry = Array.from(pendingInvites.value.entries()).find(
+				([_, data]) => data.requestId === requestId
+			);
+
 			if (!friendEntry) continue;
 			const [friendId, inviteData] = friendEntry;
-			
+
 			if (status === "accepted") {
 				// Clear any timer
 				if (inviteData.timer) {
 					clearInterval(inviteData.timer);
 				}
-				
+
 				// Find the friend data
-				const friend = friends.value.find(f => f.id === friendId);
+				const friend = friends.value.find((f) => f.id === friendId);
 				console.log("Friend accepted invite:", friend);
-				
+
 				if (friend) {
 					// Show notification that player accepted
-					const notification = document.createElement('div');
-					notification.className = 'fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded z-50';
+					const notification = document.createElement("div");
+					notification.className =
+						"fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded z-50";
 					notification.innerHTML = `<strong>${friend.display_name || friend.nick_name || friend.email}</strong> accepted your invitation!`;
 					document.body.appendChild(notification);
-					
+
 					// Remove notification after 3 seconds
 					setTimeout(() => {
 						notification.remove();
 					}, 3000);
-					
+
 					// Create a new player object
 					const newPlayer = {
 						id: selectedPlayers.value.length,
@@ -1142,17 +1150,17 @@ const checkPendingInvites = async () => {
 						user_id: friend.id,
 						avatar: friend.avatar,
 					};
-					
+
 					console.log("Adding new player to game:", newPlayer);
-					
+
 					// Add friend to players using Vue's reactivity API to ensure UI updates
 					selectedPlayers.value = [...selectedPlayers.value, newPlayer];
-					
+
 					console.log("Updated players array:", selectedPlayers.value);
 				}
-				
+
 				pendingInvites.value.delete(friendId);
-				
+
 				// If all invites are processed, hide the invite panel
 				if (pendingInvites.value.size === 0) {
 					showInviteFriends.value = false;
@@ -1162,12 +1170,12 @@ const checkPendingInvites = async () => {
 				if (inviteData.timer) {
 					clearInterval(inviteData.timer);
 				}
-				
-				pendingInvites.value.set(friendId, { 
+
+				pendingInvites.value.set(friendId, {
 					status: status.charAt(0).toUpperCase() + status.slice(1),
-					requestId: inviteData.requestId
+					requestId: inviteData.requestId,
 				});
-				
+
 				// Remove status after 2 seconds
 				setTimeout(() => {
 					pendingInvites.value.delete(friendId);
@@ -1190,16 +1198,16 @@ const inviteFriend = async (friend: ExtendedFriend) => {
 		// Get the request ID from the response
 		console.log("Game invite response:", result);
 		const requestId = result.data?.[0]?.id;
-		
+
 		// If we can't get the ID directly, try to use the friend ID as a reference
 		if (!requestId) {
 			console.log("No request ID found in response, using friend ID as reference");
-			pendingInvites.value.set(friend.id, { 
+			pendingInvites.value.set(friend.id, {
 				status: "Pending...",
 			});
 		} else {
 			// Set initial status with request ID
-			pendingInvites.value.set(friend.id, { 
+			pendingInvites.value.set(friend.id, {
 				status: "Pending...",
 				requestId,
 			});
@@ -1208,7 +1216,7 @@ const inviteFriend = async (friend: ExtendedFriend) => {
 		// Set timeout for 2 minutes
 		const expirationTimer = setTimeout(() => {
 			if (pendingInvites.value.has(friend.id)) {
-				pendingInvites.value.set(friend.id, { 
+				pendingInvites.value.set(friend.id, {
 					status: "Expired",
 					requestId: pendingInvites.value.get(friend.id)?.requestId,
 				});
@@ -1224,19 +1232,19 @@ const inviteFriend = async (friend: ExtendedFriend) => {
 		pendingInvites.value.set(friend.id, {
 			status: "Pending...",
 			requestId: currentInvite?.requestId,
-			timer: expirationTimer
+			timer: expirationTimer,
 		});
 
 		// If we have a request ID, check status immediately and then every 5 seconds
 		if (requestId) {
 			await checkPendingInvites();
 			const statusTimer = setInterval(checkPendingInvites, 5000);
-			
+
 			// Update the timer reference
 			pendingInvites.value.set(friend.id, {
 				status: "Pending...",
 				requestId,
-				timer: statusTimer
+				timer: statusTimer,
 			});
 		} else {
 			// If we don't have a request ID, use the old polling method
@@ -1270,8 +1278,8 @@ const inviteFriend = async (friend: ExtendedFriend) => {
 					showInviteFriends.value = false;
 				} else if (invite.status === "declined" || invite.status === "expired") {
 					clearInterval(pollTimer);
-					pendingInvites.value.set(friend.id, { 
-						status: invite.status.charAt(0).toUpperCase() + invite.status.slice(1)
+					pendingInvites.value.set(friend.id, {
+						status: invite.status.charAt(0).toUpperCase() + invite.status.slice(1),
 					});
 					// Remove status after 2 seconds
 					setTimeout(() => {
@@ -1283,7 +1291,7 @@ const inviteFriend = async (friend: ExtendedFriend) => {
 			// Store the timer reference
 			pendingInvites.value.set(friend.id, {
 				status: "Pending...",
-				timer: pollTimer
+				timer: pollTimer,
 			});
 		}
 	} catch (error) {
@@ -1572,7 +1580,11 @@ onUnmounted(() => {
 							<div v-for="(dart, i) in currentTurnDarts" :key="i" class="text-base font-medium">
 								{{ formatDart(dart) }}
 							</div>
-							<div v-for="i in 3 - currentTurnDarts.length" :key="`empty-${i}`" class="text-base font-medium text-gray-300">
+							<div
+								v-for="i in 3 - currentTurnDarts.length"
+								:key="`empty-${i}`"
+								class="text-base font-medium text-gray-300"
+							>
 								-
 							</div>
 						</div>
