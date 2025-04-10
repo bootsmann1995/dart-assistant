@@ -404,7 +404,7 @@ function addScore(value: number) {
 
 	const throwScore = value * multiplierValues[currentMultiplier.value];
 	const currentPlayer = selectedPlayers.value[currentPlayerIndex.value];
-	const newScore = currentPlayer.score - throwScore;
+	const updatedScore = currentPlayer.score - throwScore;
 
 	// On first throw of turn, save starting score and reset bust flag
 	if (currentTurnDarts.value.length === 0) {
@@ -413,7 +413,7 @@ function addScore(value: number) {
 	}
 
 	// Handle bust (going below 0 or to 1)
-	if (newScore < 0 || newScore === 1) {
+	if (updatedScore < 0 || updatedScore === 1) {
 		// Record the throw that caused the bust
 		const dartThrow: DartThrow = {
 			value,
@@ -441,7 +441,7 @@ function addScore(value: number) {
 	}
 
 	// If trying to finish, must use appropriate double
-	if (newScore === 0 && currentMultiplier.value !== "double") {
+	if (updatedScore === 0 && currentMultiplier.value !== "double") {
 		// Handle bust on finish attempt
 		const dartThrow: DartThrow = {
 			value,
@@ -477,13 +477,13 @@ function addScore(value: number) {
 
 	// Update history first, then score
 	gameHistory.value.push(dartThrow);
-	currentPlayer.score = newScore;
+	currentPlayer.score = updatedScore;
 
 	// Reset multiplier after each throw
 	currentMultiplier.value = "single";
 
 	// Check for leg win
-	if (newScore === 0) {
+	if (updatedScore === 0) {
 		// Increment legs won
 		currentPlayer.legsWon++;
 
@@ -505,6 +505,9 @@ function addScore(value: number) {
 	if (currentTurnDarts.value.length === 3) {
 		moveToNextPlayer();
 	}
+
+	// Log score update for debugging
+	console.log(`Player ${currentPlayer.name}: ${dartThrow.score} → ${updatedScore} (${currentMultiplier.value}${value} = -${throwScore})`);
 }
 
 function moveToNextPlayer() {
@@ -1165,6 +1168,7 @@ const checkPendingInvites = async () => {
 
 				// Remove status after 2 seconds
 				setTimeout(() => {
+					const friendId = friendEntry[0];
 					pendingInvites.value.delete(friendId);
 				}, 2000);
 			}
@@ -1209,7 +1213,7 @@ const inviteFriend = async (friend: ExtendedFriend) => {
 				});
 				// Remove status after 2 seconds
 				setTimeout(() => {
-					pendingInvites.value.delete(friendId);
+					pendingInvites.value.delete(friend.id);
 				}, 2000);
 			}
 		}, 120000); // 2 minutes
