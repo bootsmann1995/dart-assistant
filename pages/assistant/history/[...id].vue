@@ -347,16 +347,13 @@ const getLegHistory = (): LegHistory[] => {
 
 					const isLegWinner = legWinner?.name === player.name;
 					
-					if (newScore === 0 || (isLastThrowInLeg && isLegWinner)) {
+					if (turn.scoreLeft === 0 || (isLastThrowInLeg && isLegWinner)) {
 						turn.isFinish = true;
 						turn.highlights.push("Finish");
 						legData.winner = player.name;
 						playerStats.checkoutSuccess = true;
 						// Force score to exactly 0 for winning throws
 						turn.scoreLeft = 0;
-					} else {
-						// Normal case - use calculated score
-						turn.scoreLeft = newScore;
 					}
 
 					// Track checkout attempts
