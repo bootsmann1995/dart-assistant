@@ -306,7 +306,6 @@ const getLegHistory = (): LegHistory[] => {
 
 				// Handle bust and score update
 				const isBust = turnThrows.some((t) => t.wasBust);
-				const newScore = isBust ? currentScore : currentScore - turnScore;
 
 				// For busted turns, always count as 3 darts for statistical purposes
 				// This ensures busted darts are properly accounted for in the average
@@ -317,9 +316,13 @@ const getLegHistory = (): LegHistory[] => {
 					turn.isBust = true;
 					turn.highlights.push("Bust");
 					turn.turnScore = 0;
+					// On bust, score remains the same as before the turn
+					turn.scoreLeft = currentScore;
 				} else {
 					// Normal counting for non-busted turns
 					playerStats.darts += turnThrows.length;
+					// Only subtract score if not a bust
+					turn.scoreLeft = currentScore - turnScore;
 
 					// Add score-based highlights
 					if (turnScore === 180) turn.highlights.push("180");
