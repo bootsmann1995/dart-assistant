@@ -325,18 +325,26 @@ const getLegHistory = (): LegHistory[] => {
 					if (turnScore === 180) turn.highlights.push("180");
 					else if (turnScore >= 140) turn.highlights.push("Ton+");
 
-					// Check for finish - Fix for the last leg winning throw
-					// The issue is that some winning throws might not exactly reach 0 due to calculation errors
-					// We need to check if this is the last throw in the leg for this player and if they won the leg
-					const isLastThrowInLeg =
-						gameData
-							.value!.history.filter((t) => t.leg === parseInt(legIndex) && t.playerIndex === playerIndex)
-							.pop() === turnThrows[turnThrows.length - 1];
+					// Check for finish
+					// Get all throws for this player in this leg
+					const playerLegThrows = gameData.value!.history.filter(
+						(t) => t.leg === parseInt(legIndex) && t.playerIndex === playerIndex
+					);
+					// Check if this is the last throw in the leg for this player
+					const isLastThrowInLeg = playerLegThrows[playerLegThrows.length - 1] === turnThrows[turnThrows.length - 1];
 
-					const isWinner = gameData.value!.winner === player.name;
-					const isCloseToZero = newScore <= 0 && newScore >= -2; // Allow small calculation errors
+					// Get the leg winner by checking which player won this leg number
+					const legWinner = gameData.value!.players.find(p => {
+						// Find the last non-bust throw in this leg
+						const lastNonBustThrow = gameData.value!.history
+							.filter(t => t.leg === parseInt(legIndex) && !t.wasBust)
+							.pop();
+						return lastNonBustThrow?.playerIndex === gameData.value!.players.indexOf(p);
+					});
 
-					if (newScore === 0 || (isLastThrowInLeg && isWinner && isCloseToZero)) {
+					const isLegWinner = legWinner?.name === player.name;
+					
+					if (newScore === 0 || (isLastThrowInLeg && isLegWinner)) {
 						turn.isFinish = true;
 						turn.highlights.push("Finish");
 						legData.winner = player.name;
